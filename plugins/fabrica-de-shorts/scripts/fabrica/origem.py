@@ -12,7 +12,17 @@ from . import util
 
 _YDL = None  # trocado nos testes
 ESPERAS_LEGENDA = (5, 15)  # novas tentativas quando a legenda vem sem fala
-AVISO_VAZIA = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+
+
+def _aviso_sem_legenda(url: str, vazia: bool) -> str:
+    """Só cita comando que existe: o --transcrever é do `legenda`, não do `achar`."""
+    motivo = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou" if vazia else "o vídeo não tem legenda;"
+    return f"{motivo} rode `FAB legenda {url} --transcrever` (demora)"
+
+
+def _erro_achar_sem_legenda(url: str, modelo_url: str) -> str:
+    return (f"sem legenda: tente o vídeo do próprio canal do podcast ou `FAB legenda {url} --transcrever` (demora) "
+            f"e depois `FAB achar {modelo_url} --candidatos {url}`")
 
 
 def _esperar(segundos: float):  # trocado nos testes
@@ -203,8 +213,9 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
         info = y.extract_info(url, download=False)
     vid = info.get("id", "video")
     vtts = _vtts_com_fala(pasta, vid)
+    transcrito = util.ler_json(pasta / f"{vid}.words.json", [])  # de um `legenda --transcrever` anterior
     vazia = False
-    if not vtts:
+    if not vtts and not transcrito:
         escolha = escolher_legenda(info, idioma)
         if escolha:
             chave, sub_url = escolha
@@ -222,6 +233,10 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
     if vtts:
         gravar_txt(vtt_para_linhas(vtts[0].read_text(encoding="utf-8", errors="replace")), txt)
         dados.update(vtt=str(vtts[0]), txt=str(txt))
+    elif transcrito:
+        from . import transcricao
+        gravar_txt(transcricao.linhas(transcrito), txt)
+        dados.update(txt=str(txt), transcrito=True)
     elif transcrever_se_faltar:
         from . import transcricao
         audio = pasta / f"{vid}.m4a"
@@ -234,7 +249,7 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
         gravar_txt(transcricao.linhas(palavras), txt)
         dados.update(txt=str(txt), transcrito=True)
     else:
-        dados.update(txt=None, aviso=AVISO_VAZIA if vazia else "o vídeo não tem legenda; rode de novo com --transcrever")
+        dados.update(txt=None, aviso=_aviso_sem_legenda(url, vazia))
     return dados
 
 
@@ -315,10 +330,11 @@ def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, 
             resultados.append({"url": url, "erro": f"{type(e).__name__}: {str(e)[:200]}"})
             continue
         dados = {"url": url, "titulo": ep.get("titulo"), "canal": ep.get("canal"), "duracao": ep.get("duracao")}
-        if not ep.get("vtt"):  # sem legenda: diz por quê, em vez de "regioes: []" mudo
-            resultados.append({**dados, "erro": ep.get("aviso") or "sem legenda"})
+        texto = ep.get("vtt") or ep.get("txt")  # txt sem vtt = transcrição de um `legenda --transcrever`
+        if not texto:  # sem legenda: diz o que fazer, em vez de "regioes: []" mudo
+            resultados.append({**dados, "erro": _erro_achar_sem_legenda(url, modelo_url)})
             continue
-        resultados.append({**dados, "regioes": localizar(ref_palavras, ler_linhas(ep["vtt"]))})
+        resultados.append({**dados, "regioes": localizar(ref_palavras, ler_linhas(texto))})
     resultados.sort(key=lambda r: -(r.get("regioes") or [{"acertos": 0}])[0]["acertos"])
     return {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "data", "descricao", "txt")},
             "episodios": resultados}

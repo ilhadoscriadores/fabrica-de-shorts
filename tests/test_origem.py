@@ -177,7 +177,9 @@ def test_legenda_vazia_tenta_de_novo_e_avisa(monkeypatch, tmp_path):
     pedidos = _servir(monkeypatch, [b""])
     r = origem.legenda("https://youtu.be/abc", tmp_path, "pt")
     assert r["txt"] is None
-    assert r["aviso"] == "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+    assert r["aviso"].startswith("legenda vazia: o YouTube recusou; tente de novo em 1 minuto")
+    assert "use --transcrever" not in r["aviso"]  # o achar não tem esse parâmetro
+    assert "`FAB legenda https://youtu.be/abc --transcrever`" in r["aviso"]
     assert len(pedidos) == 3 and esperas == [5, 15]
     assert not list(tmp_path.glob("*.vtt"))
 
@@ -217,7 +219,7 @@ def test_legenda_vazia_com_transcrever_transcreve(monkeypatch, tmp_path):
 def test_achar_episodio_sem_legenda_tem_erro(monkeypatch, tmp_path):
     ref = tmp_path / "ref.txt"
     ref.write_text("00:00:01 eu tava na mata\n", encoding="utf-8")
-    aviso = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+    aviso = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto"
 
     def legenda(url, pasta, idioma="pt", transcrever_se_faltar=False):
         if "modelo" in url:
@@ -226,8 +228,39 @@ def test_achar_episodio_sem_legenda_tem_erro(monkeypatch, tmp_path):
     monkeypatch.setattr(origem, "legenda", legenda)
     r = origem.achar("https://youtu.be/modelo", tmp_path, candidatos=["https://youtu.be/ep1"])
     ep = r["episodios"][0]
-    assert "regioes" not in ep
-    assert "legenda vazia" in ep["erro"] and ep["titulo"] == "Episódio 1"
+    assert "regioes" not in ep and ep["titulo"] == "Episódio 1"
+    assert ep["erro"] == ("sem legenda: tente o vídeo do próprio canal do podcast ou "
+                          "`FAB legenda https://youtu.be/ep1 --transcrever` (demora) e depois "
+                          "`FAB achar https://youtu.be/modelo --candidatos https://youtu.be/ep1`")
+
+
+def _ydl_sem_legenda():
+    class FalsoYDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=True):
+            assert not download, "não pode baixar nem transcrever de novo"
+            return {"id": url.rsplit("/", 1)[-1], "title": "Episódio", "channel": "Podcast"}
+    return FalsoYDL
+
+
+def test_achar_usa_a_transcricao_feita_pelo_legenda(monkeypatch, tmp_path):
+    frase = "eu tava deitado no chão da mata e comecei a rezar baixinho"
+    (tmp_path / "modelo.pt.vtt").write_text(f"WEBVTT\n\n00:00:01.000 --> 00:00:05.000\n{frase}\n", encoding="utf-8")
+    util.gravar_json(tmp_path / "ep1.words.json",  # o que o `FAB legenda <url> --transcrever` deixou
+                     [{"w": w, "s": 100 + i * 0.4, "e": 100.3 + i * 0.4} for i, w in enumerate(frase.split())])
+    monkeypatch.setattr(origem, "_YDL", _ydl_sem_legenda())
+    r = origem.achar("https://youtu.be/modelo", tmp_path, candidatos=["https://youtu.be/ep1"])
+    ep = r["episodios"][0]
+    assert "erro" not in ep, ep
+    assert ep["regioes"] and ep["regioes"][0]["inicio"] == pytest.approx(98, abs=1)
 
 
 def test_vtt_decodifica_entidades_html():
