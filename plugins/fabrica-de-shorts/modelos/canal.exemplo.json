@@ -1,0 +1,36 @@
+{
+  "versao": 1,
+  "nome": "BO 24 Horas",
+  "arroba": "@bo24horas",
+  "nicho": "podcast policial",
+  "idioma": "pt",
+  "termos_busca": [
+    "cortes podcast policial",
+    "policial conta história podcast",
+    "ex policial podcast corte",
+    "delegado conta caso podcast",
+    "bope podcast corte",
+    "rota podcast corte",
+    "policial militar podcast cortes",
+    "história de abordagem policial podcast"
+  ],
+  "ignorar_canais": [],
+  "admirados": [
+    "https://www.youtube.com/@exemplo (legenda grande e zoom lento)"
+  ],
+  "estilo_aprovado": false,
+  "estilo": {
+    "cor": "#ff3b3b",
+    "fonte": "Montserrat",
+    "legenda_top": 1180,
+    "marca_opacidade": 0.08,
+    "zoom": true
+  },
+  "opcoes": {
+    "espelhar": false,
+    "selo": false,
+    "censurar_palavroes": true,
+    "max_segundos": 90
+  },
+  "convite_mostrado": false
+}
