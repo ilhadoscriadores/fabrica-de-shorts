@@ -106,7 +106,10 @@ def _detector(cv2, pw, ph):
     except Exception:
         pass
     if hasattr(cv2, "FaceDetectorYN") and MODELO.exists():
-        yn = cv2.FaceDetectorYN.create(str(MODELO), "", (pw, ph), 0.75, 0.3, 50)
+        import numpy as np
+        # pelo buffer: com acento no caminho (C:\Users\João\...) o OpenCV não abre o arquivo
+        buf = np.fromfile(str(MODELO), dtype=np.uint8)
+        yn = cv2.FaceDetectorYN.create("onnx", buf, np.array([], np.uint8), (pw, ph), 0.75, 0.3, 50)
 
         def yunet(img):
             _, faces = yn.detect(img)

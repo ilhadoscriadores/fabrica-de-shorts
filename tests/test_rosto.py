@@ -67,3 +67,19 @@ def test_resolucao_qualquer(tmp_path, tam):
     assert r["largura"] == larg and r["altura"] == alt
     assert r["camera"] and all(0 <= p["cx"] <= 1 and 0 <= p["cy"] <= 1 for p in r["camera"])
     assert (tmp_path / "rostos.json").exists()
+
+
+def test_modelo_em_caminho_com_acento(tmp_path, monkeypatch):
+    """O cache do plugin fica em C:\\Users\\<nome>\\...: João ou Fábio não podem quebrar o detector."""
+    pasta = tmp_path / "Usuário Ação"
+    pasta.mkdir()
+    modelo = pasta / rosto.MODELO.name
+    modelo.write_bytes(rosto.MODELO.read_bytes())
+    monkeypatch.setattr(rosto, "MODELO", modelo)
+    v = tmp_path / "base.mp4"
+    util.rodar([util.ffmpeg(), "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=640x360:r=30:d=1",
+                "-c:v", "libx264", "-preset", "ultrafast", str(v)])
+    import cv2
+    assert rosto._detector(cv2, 640, 360).__name__ == "yunet"
+    r = rosto.rastrear(v)
+    assert r["largura"] == 640 and r["camera"]
