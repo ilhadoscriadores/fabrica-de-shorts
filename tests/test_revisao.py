@@ -75,6 +75,22 @@ def test_palavrao_que_vaza_reprova(corte_sintetico):
     assert any("palavrão" in e for e in r["erros"]), r["erros"]
 
 
+def test_relatorio_nao_se_contradiz_com_avisos_da_segunda_conferencia(corte_sintetico, monkeypatch):
+    from fabrica import montagem
+    _, c = corte_sintetico
+    montagem.montar_dados(c)
+    monkeypatch.setattr(revisao, "_transcrever_final", lambda v: [])
+    monkeypatch.setattr(revisao, "segunda_conferencia", lambda b, p: ([], ["aviso 1", "aviso 2"]))
+    r = revisao.revisar(c / "base.mp4", c)
+    assert "2ª conferência: sem deslocamento geral (2 casos isolados nos avisos)" in r["conferido"]
+    assert not any("legenda no lugar" in o for o in r["conferido"])
+    monkeypatch.setattr(revisao, "segunda_conferencia", lambda b, p: ([], ["aviso 1"]))
+    assert "2ª conferência: sem deslocamento geral (1 caso isolado nos avisos)" in revisao.revisar(c / "base.mp4", c)["conferido"]
+    monkeypatch.setattr(revisao, "segunda_conferencia", lambda b, p: ([], []))
+    r = revisao.revisar(c / "base.mp4", c)
+    assert any("legenda no lugar, sem deslocamento" in o for o in r["conferido"])
+
+
 def _bloco(texto, f0):
     return {"f0": f0, "f1": f0 + 20, "tam": 92,
             "palavras": [{"w": w, "f0": f0, "f1": f0 + 5, "destaque": False, "censura": False} for w in texto.split()]}

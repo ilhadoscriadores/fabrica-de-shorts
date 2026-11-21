@@ -268,7 +268,7 @@ def render(pasta_corte, revisar: bool = True) -> dict:
     util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(enc_tmp), "-map", "0", "-c", "copy", "-bsf:v", BSF,
                 "-movflags", "+faststart", str(final)])
     r = {"ok": True, "final": str(final), "versao": n, "duracao": round(dados["duracaoFrames"] / FPS, 2),
-         "lufs": I, "pico_dbtp": TP, "render_s": round(t_render), "avisos": avisos}
+         "lufs": I, "pico_master_dbtp": TP, "render_s": round(t_render), "avisos": avisos}  # master antes do AAC
     if canal["opcoes"].get("selo"):
         sel = (config.carregar_corte(pasta, "render").get("edicao") or {}).get("selo")             or {"inicio": min(20.0, r["duracao"] / 3), "lado": "esq"}
         mov_selo = _selo(trab, editor, env, sel.get("lado", "esq"), sel.get("cor", dados["cor"]))

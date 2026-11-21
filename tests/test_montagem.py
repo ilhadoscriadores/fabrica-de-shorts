@@ -72,6 +72,7 @@ def test_render_curto(corte_sintetico, plugin_dir):
     from fabrica import audio
     I, TP = audio.medir(final)
     assert I == pytest.approx(-14, abs=1.0) and TP <= -1.0
+    assert "pico_dbtp" not in r and r["pico_master_dbtp"] <= -1.0  # pico do master (antes do AAC)
 
 
 def test_resumo_da_revisao_conta_todos_os_erros():

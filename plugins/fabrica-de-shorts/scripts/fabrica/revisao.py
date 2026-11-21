@@ -150,7 +150,10 @@ def revisar(video, pasta_corte=None, transcrever_de_novo: bool = True) -> dict:
             seg_erros, seg_avisos = segunda_conferencia(blocos, _transcrever_final(video))
             erros += seg_erros
             avisos += seg_avisos
-            if not seg_erros:
+            if not seg_erros and seg_avisos:  # sem contradizer os avisos logo abaixo
+                n = len(seg_avisos)
+                ok.append(f"2ª conferência: sem deslocamento geral ({n} {'caso isolado' if n == 1 else 'casos isolados'} nos avisos)")
+            elif not seg_erros:
                 ok.append("2ª conferência (Whisper no vídeo pronto): legenda no lugar, sem deslocamento")
         top = (dados.get("legenda") or {}).get("top", 1180)
         if rostos:
