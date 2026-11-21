@@ -1,3 +1,6 @@
+import os
+import time
+
 import pytest
 
 from fabrica import montagem, util
@@ -48,6 +51,40 @@ def test_plano_mudou_pede_base_de_novo(corte_sintetico, mudanca):
     with pytest.raises(util.ErroUsuario) as e:
         montagem.montar_dados(c)
     assert "FAB base" in str(e.value) and "de novo antes do render" in str(e.value)
+
+
+def test_public_fica_so_com_o_corte_atual(corte_sintetico):
+    """O Remotion copia o public/ inteiro a cada render: pastas de cortes antigos não podem se acumular."""
+    pasta, c = corte_sintetico
+    pub = pasta / "editor" / "public"
+    velho, outro_render = pub / "007-velho", pub / "008-renderizando-agora"
+    for p in (velho / "sfx", outro_render):
+        p.mkdir(parents=True)
+    (velho / "base.mp4").write_bytes(b"x")
+    (pub / "exemplo").mkdir(exist_ok=True)
+    antigo = time.time() - 6 * 3600
+    for p in (velho, pub / "exemplo", pub / "fontes", pub / "ilha-logo.png"):
+        os.utime(p, (antigo, antigo))
+    montagem.montar_dados(c)
+    assert not velho.exists()
+    assert outro_render.exists()  # mexida agora: pode ser outro corte renderizando ao mesmo tempo
+    assert (pub / c.name / "base.mp4").exists()
+    for fica in ("fontes", "exemplo", "ilha-logo.png"):
+        assert (pub / fica).exists(), fica
+
+
+def test_render_apaga_a_pasta_do_corte_no_public_mesmo_com_erro(corte_sintetico, monkeypatch):
+    pasta, c = corte_sintetico
+    (pasta / "editor" / "node_modules").mkdir(exist_ok=True)
+
+    def falha(*a, **k):
+        assert (pasta / "editor" / "public" / c.name / "base.mp4").exists()
+        raise util.ErroComando("remotion falhou")
+    monkeypatch.setattr(montagem, "_npx_render", falha)
+    with pytest.raises(util.ErroComando):
+        montagem.render(c, revisar=False)
+    assert not (pasta / "editor" / "public" / c.name).exists()
+    assert (c / "base.mp4").exists()  # o link no public sai; a base do corte fica
 
 
 def test_sem_trilha_quando_biblioteca_vazia(corte_sintetico):

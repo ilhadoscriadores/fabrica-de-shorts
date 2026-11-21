@@ -113,9 +113,24 @@ def _sons_da_pasta(pasta_trab, categoria):
     return sorted(p for p in d.glob("*") if p.suffix.lower() in (".wav", ".mp3", ".ogg")) if d.exists() else []
 
 
+EM_USO_S = 3 * 3600  # pasta do public/ mexida há menos que isso pode ser de outro render rodando agora
+
+
+def limpar_public(public: Path, manter: str | None = None):
+    """Tira do public/ as pastas de cortes (NNN-nome): o Remotion copia o public/ inteiro a cada render.
+    Nunca toca em fontes/, exemplo/ nem no ilha-logo.png."""
+    if not public.exists():
+        return
+    for p in public.iterdir():
+        if p.is_dir() and re.match(r"\d{3,}-", p.name) and p.name != manter \
+                and time.time() - p.stat().st_mtime > EM_USO_S:
+            shutil.rmtree(p, ignore_errors=True)
+
+
 def montar_dados(pasta_corte) -> dict:
     pasta = Path(pasta_corte).resolve()
     trab = config.pasta_trabalho(pasta)
+    limpar_public(trab / "editor" / "public", manter=pasta.name)
     canal = config.carregar_canal(trab)
     corte = config.carregar_corte(pasta, etapa="render")
     ed = corte.get("edicao") or {}
@@ -259,7 +274,10 @@ def render(pasta_corte, revisar: bool = True) -> dict:
     n = proxima_versao(pasta)
     tmp = trab / ".fabrica" / "tmp"
     mov, mix, master, enc_tmp = (tmp / f"{pasta.name}_v{n}{s}" for s in (".mov", "_mix.wav", "_master.wav", "_enc.mp4"))
-    _npx_render(editor, "Corte", mov, [f"--props={pasta / 'dados.json'}", "--codec=h264", "--crf=14", "--audio-codec=pcm-16"], env)
+    try:
+        _npx_render(editor, "Corte", mov, [f"--props={pasta / 'dados.json'}", "--codec=h264", "--crf=14", "--audio-codec=pcm-16"], env)
+    finally:  # o public/ do corte só serve para este render
+        shutil.rmtree(editor / "public" / pasta.name, ignore_errors=True)
     t_render = time.time() - t0
     util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(mov), "-vn", "-c:a", "pcm_f32le", str(mix)])
     I, TP = audio.masterizar(mix, master)
