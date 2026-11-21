@@ -150,6 +150,24 @@ def ler_linhas(caminho) -> list[tuple[float, str]]:
     return out
 
 
+_LINK = re.compile(r"(?:youtube\.com/(?:watch\?(?:\S*?&)?v=|live/)|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])"
+                   r"|(?:completo|original)\s*:\s*([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])", re.I)
+_PALAVRA = re.compile(r"[A-Za-z][a-z]{10}|[A-Z]{11}")  # "original: Inteligente" não é id
+
+
+def links_da_descricao(texto, ignorar: str | None = None) -> list[str]:
+    """Links e ids do YouTube na descrição ("vídeo completo: ..."), na ordem, sem repetir e sem o próprio vídeo."""
+    out = []
+    for m in _LINK.finditer(texto or ""):
+        vid = m.group(1) or m.group(2)
+        if m.group(2) and _PALAVRA.fullmatch(vid):
+            continue
+        url = f"https://www.youtube.com/watch?v={vid}"
+        if vid != ignorar and url not in out:
+            out.append(url)
+    return out
+
+
 def escolher_legenda(info: dict, idioma: str):
     """Uma legenda só (baixar várias dá 429): manual no idioma, automática original, automática no idioma."""
     manuais = info.get("subtitles") or {}
@@ -229,6 +247,9 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
     dados = {"id": vid, "titulo": info.get("title"), "canal": info.get("channel") or info.get("uploader"),
              "duracao": info.get("duration"), "views": info.get("view_count"), "data": info.get("upload_date"),
              "descricao": (info.get("description") or "")[:600]}
+    links = links_da_descricao(info.get("description"), ignorar=vid)
+    if links:
+        dados["links_na_descricao"] = links
     txt = pasta / f"{vid}.txt"
     if vtts:
         gravar_txt(vtt_para_linhas(vtts[0].read_text(encoding="utf-8", errors="replace")), txt)
@@ -317,8 +338,10 @@ def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, 
         raise util.ErroUsuario("não consegui o texto do corte modelo")
     ref_palavras = " ".join(x for _, x in ler_linhas(ref["txt"])).split()
     lista = list(candidatos or [])
-    if not lista and busca:
-        lista = [c["url"] for c in buscar(busca, limite=4, longos=True, idioma=idioma)]
+    if not lista:  # o "vídeo completo: <link>" da descrição do Short vem antes da busca
+        lista = list(ref.get("links_na_descricao") or [])
+        if busca:
+            lista += [u for u in (c["url"] for c in buscar(busca, limite=4, longos=True, idioma=idioma)) if u not in lista]
     resultados = []
     for url in lista[:5]:
         try:
@@ -336,7 +359,7 @@ def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, 
             continue
         resultados.append({**dados, "regioes": localizar(ref_palavras, ler_linhas(texto))})
     resultados.sort(key=lambda r: -(r.get("regioes") or [{"acertos": 0}])[0]["acertos"])
-    return {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "data", "descricao", "txt")},
+    return {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "data", "descricao", "links_na_descricao", "txt")},
             "episodios": resultados}
 
 

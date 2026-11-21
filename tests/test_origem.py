@@ -263,6 +263,49 @@ def test_achar_usa_a_transcricao_feita_pelo_legenda(monkeypatch, tmp_path):
     assert ep["regioes"] and ep["regioes"][0]["inicio"] == pytest.approx(98, abs=1)
 
 
+def test_links_da_descricao():
+    desc = ("Vídeo completo: https://www.youtube.com/watch?v=ng-Q6ZD0XmI&t=120s\n"
+            "parte 2: https://youtu.be/68L5Flrr0Mo?si=x | live https://www.youtube.com/live/AbC_123-xyZ\n"
+            "original: Q6ZD0XmIng1 · repetido youtu.be/ng-Q6ZD0XmI · o próprio Short youtu.be/SHORTabc123\n"
+            "Episódio original: Inteligente demais")
+    assert origem.links_da_descricao(desc, ignorar="SHORTabc123") == [
+        "https://www.youtube.com/watch?v=ng-Q6ZD0XmI", "https://www.youtube.com/watch?v=68L5Flrr0Mo",
+        "https://www.youtube.com/watch?v=AbC_123-xyZ", "https://www.youtube.com/watch?v=Q6ZD0XmIng1"]
+    assert origem.links_da_descricao("vídeo completo:  dQw4w9WgXcQ") == ["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
+    assert origem.links_da_descricao(None) == []
+
+
+def test_legenda_devolve_os_links_da_descricao_inteira(monkeypatch, tmp_path):
+    ydl = _ydl_com_legenda()
+    orig = ydl.extract_info
+
+    def extract_info(self, url, download=True):
+        return {**orig(self, url, download), "description": "x" * 900 + " vídeo completo: youtu.be/ng-Q6ZD0XmI"}
+    monkeypatch.setattr(ydl, "extract_info", extract_info)
+    monkeypatch.setattr(origem, "_YDL", ydl)
+    _servir(monkeypatch, [VTT_BOM.encode()])
+    r = origem.legenda("https://youtu.be/abc", tmp_path, "pt")
+    assert r["links_na_descricao"] == ["https://www.youtube.com/watch?v=ng-Q6ZD0XmI"]
+
+
+def test_achar_poe_o_link_da_descricao_antes_da_busca(monkeypatch, tmp_path):
+    ref = tmp_path / "ref.txt"
+    ref.write_text("00:00:01 eu tava na mata\n", encoding="utf-8")
+    vistos = []
+    ep = "https://www.youtube.com/watch?v=ng-Q6ZD0XmI"
+
+    def legenda(url, pasta, idioma="pt", transcrever_se_faltar=False):
+        if "modelo" in url:
+            return {"txt": str(ref), "links_na_descricao": [ep]}
+        vistos.append(url)
+        return {"txt": None}
+    monkeypatch.setattr(origem, "legenda", legenda)
+    monkeypatch.setattr(origem, "buscar", lambda termo, limite, longos, idioma: [
+        {"url": "https://www.youtube.com/watch?v=outro123456"}, {"url": ep}])
+    origem.achar("https://youtu.be/modelo", tmp_path, busca="honorio")
+    assert vistos == [ep, "https://www.youtube.com/watch?v=outro123456"]
+
+
 def test_vtt_decodifica_entidades_html():
     vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\neu&nbsp;tava &amp; voc&ecirc; disse &quot;oi&quot; &gt;&gt; d&#39;\n"
     assert origem.vtt_para_linhas(vtt) == [(1.0, "eu tava & você disse \"oi\" >> d'")]

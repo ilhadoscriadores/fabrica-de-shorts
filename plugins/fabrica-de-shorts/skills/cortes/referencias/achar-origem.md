@@ -2,7 +2,7 @@
 
 Sempre corte do **episódio original**, nunca do corte de outro canal. O corte viral só prova que o assunto funciona.
 
-1. `FAB achar <url do corte> --busca "<termo>"` baixa a legenda do corte, procura episódios longos com o termo e mostra onde a fala aparece em cada um (`regioes`, melhores primeiro, com `acertos` e `cobertura`).
+1. `FAB achar <url do corte> --busca "<termo>"` baixa a legenda do corte, procura episódios longos com o termo e mostra onde a fala aparece em cada um (`regioes`, melhores primeiro, com `acertos` e `cobertura`). Link do YouTube na descrição do corte ("vídeo completo: ...") entra como 1º candidato.
    - Bom termo: nome do convidado + nome do podcast ("sargento honorio fala glauber"). Olhe o título, a descrição (`modelo.descricao`) e a legenda do corte: quase sempre o podcast aparece lá.
    - Já sabe o episódio? `FAB achar <url do corte> --candidatos <url1> <url2>`.
 2. **Achou** quando a 1ª região tem muitos acertos (dezenas) e cobertura alta. Duas regiões fortes no mesmo episódio = o corte juntou dois trechos: baixe de antes da primeira até depois da segunda (até ~6 min) ou baixe em dois cortes de ensaio.
