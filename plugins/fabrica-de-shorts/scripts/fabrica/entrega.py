@@ -77,6 +77,26 @@ def _quebrar(frase: str):
     return [" ".join(ws[:melhor]), " ".join(ws[melhor:])]
 
 
+def _cobrir(img, caixa: dict, alvo_w: int, alvo_h: int, foco: float, Image):
+    """Recorta da caixa o pedaço no formato do alvo (centrado no foco) e redimensiona."""
+    x, y, w, h = caixa["x"], caixa["y"], caixa["w"], caixa["h"]
+    if w / h > alvo_w / alvo_h:
+        cw = h * alvo_w / alvo_h
+        cx = min(max(x, x + foco * w - cw / 2), x + w - cw)
+        box = (cx, y, cx + cw, y + h)
+    else:
+        ch = w * alvo_h / alvo_w
+        box = (x, y + (h - ch) / 2, x + w, y + (h + ch) / 2)
+    return img.crop(tuple(round(v) for v in box)).resize((alvo_w, alvo_h), Image.LANCZOS)
+
+
+def _empilhar(img, lay: dict, h_top: int, Image):
+    tela = Image.new("RGB", (1080, 1920))
+    tela.paste(_cobrir(img, lay["cam"], 1080, h_top, lay.get("foco_cam", 0.5), Image), (0, 0))
+    tela.paste(_cobrir(img, lay["jogo"], 1080, 1920 - h_top, 0.5, Image), (0, h_top))
+    return tela
+
+
 def capa(pasta_corte, frase: str, t: float | None = None) -> Path:
     from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
@@ -95,13 +115,17 @@ def capa(pasta_corte, frase: str, t: float | None = None) -> Path:
     util.rodar([util.ffmpeg(), "-v", "error", "-y", "-ss", f"{t:.3f}", "-i", str(pasta / "base.mp4"), "-frames:v", "1", str(quadro)])
     img = Image.open(quadro).convert("RGB")
     bw, bh = img.size
-    cx, cy = montagem.camera_em(rostos.get("camera", []), t) if rostos else (0.5, 0.4)
-    k = max(1080 / bw, 1920 / bh) * 1.08
-    img = img.resize((round(bw * k), round(bh * k)), Image.LANCZOS)
-    vw, vh = img.size
-    left = int(min(max(0, cx * vw - 540), vw - 1080))
-    top = int(min(max(0, cy * vh - 760), vh - 1920))
-    img = img.crop((left, top, left + 1080, top + 1920))
+    lay = montagem.layout_empilhado(pasta, corte, bw, bh)
+    if lay:  # live: webcam em cima, jogo embaixo (igual ao vídeo)
+        img = _empilhar(img, lay, round(lay["divisao"] * 1920), Image)
+    else:
+        cx, cy = montagem.camera_em(rostos.get("camera", []), t) if rostos else (0.5, 0.4)
+        k = max(1080 / bw, 1920 / bh) * 1.08
+        img = img.resize((round(bw * k), round(bh * k)), Image.LANCZOS)
+        vw, vh = img.size
+        left = int(min(max(0, cx * vw - 540), vw - 1080))
+        top = int(min(max(0, cy * vh - 760), vh - 1920))
+        img = img.crop((left, top, left + 1080, top + 1920))
     img = ImageEnhance.Contrast(ImageEnhance.Color(img).enhance(1.1)).enhance(1.08)
     grad = Image.new("L", (1, 1920))
     for y in range(1920):
@@ -140,6 +164,18 @@ def _credito_trilha(trab: Path, arquivo: str | None) -> str | None:
 
 def _milhar(n) -> str:
     return f"{int(n):,}".replace(",", ".")
+
+
+def _numeros_modelo(modelo: dict) -> str:
+    """Views do corte modelado; sem views (Instagram, TikTok), as curtidas; sem nada, vazio."""
+    for chave, rotulo in (("views", "views"), ("curtidas", "curtidas")):
+        try:
+            n = int(modelo.get(chave))
+        except (TypeError, ValueError):
+            continue
+        if n > 0:
+            return f" · {_milhar(n)} {rotulo}"
+    return ""
 
 
 def postagem(pasta_corte) -> Path:
@@ -185,7 +221,7 @@ def postagem(pasta_corte) -> Path:
            "ORIGEM"]
     if modelo.get("url"):
         txt.append(f"- Corte viral modelado: {modelo['url']}")
-        txt.append(f"  \"{modelo.get('titulo', '')}\" · {modelo.get('canal', '')} · {_milhar(modelo.get('views', 0))} views")
+        txt.append(f"  \"{modelo.get('titulo', '')}\" · {modelo.get('canal', '')}{_numeros_modelo(modelo)}")
     if link:
         txt.append(f"- {original}")
     if trechos:

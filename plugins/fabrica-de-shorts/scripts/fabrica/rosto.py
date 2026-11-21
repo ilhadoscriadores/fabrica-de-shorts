@@ -184,8 +184,139 @@ def rastrear(video, saida_json=None) -> dict:
     return dados
 
 
+# ---------- live com webcam: acha a caixa da webcam (para o layout empilhado) ----------
+CANTO_L, CANTO_A = 0.45, 0.5   # área de cada canto onde a webcam é procurada (fração da largura/altura)
+ROSTO_MAX = 0.09               # rosto maior que isso (fração da largura) não é webcam de canto: é podcast
+PRESENCA_MIN = 0.5             # o rosto aparece em pelo menos metade das amostras
+DEGRAU_MIN = 12.0              # salto de "movimento" (desvio no tempo) entre a webcam parada e o jogo
+
+
+def _amostras(video, n=16):
+    import cv2
+    cap = cv2.VideoCapture(str(video))
+    if not cap.isOpened():
+        raise util.ErroUsuario(f"não consegui abrir {video}")
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+    quadros = []
+    for i in [int(x) for x in __import__("numpy").linspace(0, total - 1, n + 2)[1:-1]]:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+        ok, fr = cap.read()
+        if ok:
+            quadros.append(fr)
+    cap.release()
+    return quadros
+
+
+def _degrau(perfil, a, b, k=12):
+    """Posição onde o perfil mais sobe (média dos k depois − média dos k antes), entre a e b."""
+    melhor = (0.0, None)
+    for x in range(max(a, k), min(b, len(perfil) - k)):
+        d = float(perfil[x:x + k].mean() - perfil[x - k:x].mean())
+        if d > melhor[0]:
+            melhor = (d, x)
+    return melhor
+
+
+def _caixa_canto_se(quadros, rosto):
+    """Caixa da webcam com o canto em cima à esquerda (os outros cantos chegam espelhados)."""
+    import cv2
+    import numpy as np
+    H, W = quadros[0].shape[:2]
+    fx, fy, fw, fh = rosto
+    g = np.stack([cv2.cvtColor(q, cv2.COLOR_BGR2GRAY).astype(np.float32) for q in quadros])
+    mov = g.std(0)  # a webcam (quarto parado) mexe pouco; o jogo mexe muito
+    y1, y2 = int(max(0, fy - fh)), int(min(H, fy + 2 * fh))
+    d_dir, dir_ = _degrau(mov[y1:y2].mean(0), int(fx + fw * 1.3), int(W * 0.6))
+    x1, x2 = int(max(0, fx - fw)), int(min(W, fx + 2 * fw))
+    d_bai, bai = _degrau(mov[:, x1:x2].mean(1), int(fy + fh * 1.3), int(H * 0.65))
+    if d_dir < DEGRAU_MIN or d_bai < DEGRAU_MIN or dir_ is None or bai is None:
+        # sem borda clara: uma caixa em volta do rosto, no formato 16:9
+        w = min(W * 0.4, fw * 6.0)
+        h = w * 9 / 16
+        x = max(0.0, min(fx + fw / 2 - w / 2, W - w))
+        y = max(0.0, min(fy + fh / 2 - h * 0.45, H - h))
+        return [x, y, w, h], "rosto"
+    # a moldura costuma ter uma linha forte por dentro do degrau: ela é a borda de verdade
+    gx = np.mean([np.abs(cv2.Sobel(a, cv2.CV_32F, 1, 0, ksize=3)) for a in g], 0)
+    gy = np.mean([np.abs(cv2.Sobel(a, cv2.CV_32F, 0, 1, ksize=3)) for a in g], 0)
+    lin = gy[:, :dir_].mean(1)
+    a = int(fy + fh * 1.5)
+    if bai + 4 > a and lin[a:bai + 4].max() > 4 * np.median(lin[a:bai + 4]):
+        bai = a + int(np.argmax(lin[a:bai + 4]))
+    col = gx[:bai, :].mean(0)
+    a = int(fx + fw * 1.5)
+    if dir_ + 4 > a and col[a:dir_ + 4].max() > 4 * np.median(col[a:dir_ + 4]):
+        dir_ = a + int(np.argmax(col[a:dir_ + 4]))
+    # borda de dentro (webcam que não encosta no canto): o movimento cai ao entrar na webcam
+    d_esq, esq = _degrau(-mov[y1:y2].mean(0), 0, int(max(1, fx - fw * 0.3)))
+    d_cim, cim = _degrau(-mov[:, x1:x2].mean(1), 0, int(max(1, fy - fh * 0.3)))
+    esq = esq if (esq is not None and d_esq >= DEGRAU_MIN) else 0
+    cim = cim if (cim is not None and d_cim >= DEGRAU_MIN) else 0
+    m = 6  # tira a moldura
+    return [esq + m, cim + m, max(10, dir_ - esq - 2 * m), max(10, bai - cim - 2 * m)], "bordas"
+
+
+def achar_webcam(video) -> dict | None:
+    """Live com webcam num canto: {"caixa": [x, y, w, h] em px, "canto", "rosto": {cx, cy} na caixa (0 a 1), "metodo"}.
+    None quando não tem webcam de canto (podcast, vídeo de tela cheia)."""
+    import cv2
+    import numpy as np
+    quadros = _amostras(video)
+    if not quadros:
+        return None
+    H, W = quadros[0].shape[:2]
+    cw, ch = int(W * CANTO_L), int(H * CANTO_A)
+    esc = 640 / cw
+    detectar = _detector(cv2, 640, int(ch * esc))
+    melhor = None
+    for canto, (inv_x, inv_y) in {"se": (False, False), "sd": (True, False), "ie": (False, True), "id": (True, True)}.items():
+        vistos = []
+        for q in quadros:
+            fq = q[:, ::-1] if inv_x else q
+            fq = fq[::-1] if inv_y else fq
+            c = cv2.resize(np.ascontiguousarray(fq[:ch, :cw]), (640, int(ch * esc)))
+            fs = [(x / esc, y / esc, w / esc, h / esc) for x, y, w, h in detectar(c)]
+            if fs:
+                vistos.append(max(fs, key=lambda b: b[2]))
+        if len(vistos) >= PRESENCA_MIN * len(quadros) and (melhor is None or len(vistos) > len(melhor[2])):
+            melhor = (canto, (inv_x, inv_y), vistos)
+    if not melhor:
+        return None
+    canto, (inv_x, inv_y), vistos = melhor
+    rosto = [float(np.median([b[i] for b in vistos])) for i in range(4)]
+    if rosto[2] > ROSTO_MAX * W:
+        return None
+    espelhados = [np.ascontiguousarray((q[:, ::-1] if inv_x else q)[::-1] if inv_y else (q[:, ::-1] if inv_x else q))
+                  for q in quadros]
+    (x, y, w, h), metodo = _caixa_canto_se(espelhados, rosto)
+    if inv_x:
+        x = W - x - w
+    if inv_y:
+        y = H - y - h
+    rx = (W - rosto[0] - rosto[2] / 2) if inv_x else rosto[0] + rosto[2] / 2
+    ry = (H - rosto[1] - rosto[3] / 2) if inv_y else rosto[1] + rosto[3] / 2
+    caixa = [round(x), round(y), round(w), round(h)]
+    return {"caixa": caixa, "canto": canto, "metodo": metodo, "largura": W, "altura": H,
+            "rosto": {"cx": round(min(1, max(0, (rx - x) / w)), 3), "cy": round(min(1, max(0, (ry - y) / h)), 3)}}
+
+
 def registrar(sub):
     p = sub.add_parser("rosto", help="rastreia o rosto da base.mp4 e grava rostos.json")
     p.add_argument("corte")
     p.set_defaults(func=lambda a: {k: v for k, v in rastrear(Path(a.corte) / "base.mp4", Path(a.corte) / "rostos.json").items()
                                     if k in ("largura", "altura", "cortes", "com_rosto")} | {"ok": True})
+
+    p = sub.add_parser("webcam", help="acha a webcam da live (canto) na base.mp4 e grava webcam.json + previa_webcam.jpg")
+    p.add_argument("corte")
+    p.set_defaults(func=lambda a: _cmd_webcam(Path(a.corte)))
+
+
+def _cmd_webcam(pasta: Path) -> dict:
+    w = achar_webcam(pasta / "base.mp4")
+    if not w:
+        return {"ok": True, "webcam": None, "dica": "não achei webcam de canto: o corte fica no recorte normal (layout de podcast)"}
+    util.gravar_json(pasta / "webcam.json", w)
+    x, y, cw, ch = w["caixa"]
+    util.rodar([util.ffmpeg(), "-v", "error", "-y", "-ss", "1", "-i", str(pasta / "base.mp4"), "-frames:v", "1",
+                "-vf", f"drawbox=x={x}:y={y}:w={cw}:h={ch}:color=yellow:t=6,scale=960:-1", str(pasta / "previa_webcam.jpg")])
+    return {"ok": True, "webcam": w, "previa": str(pasta / "previa_webcam.jpg")}

@@ -21,6 +21,16 @@ export type Etiqueta = { f0: number; f1: number; texto: string; emoji: string | 
 
 export type Som = { src: string; f: number; vol: number; dur?: number }; // dur em quadros (padrão 90)
 
+export type Caixa = { x: number; y: number; w: number; h: number }; // px no quadro da base
+
+export type Layout = {
+  tipo: "empilhado";
+  cam: Caixa; // a webcam da live
+  jogo: Caixa; // o pedaço do jogo que vai embaixo
+  divisao: number; // altura do painel de cima (fração da tela)
+  foco_cam: number; // onde está o rosto na largura da webcam (0 a 1)
+};
+
 export type Dados = {
   fps: 30;
   duracaoFrames: number;
@@ -37,6 +47,7 @@ export type Dados = {
   sons: Som[]; // todo efeito, whoosh e bipe de censura, já expandidos
   trilha: { src: string; vol: number } | null; // já em loop no tamanho do corte e com ducking
   selo: null;
+  layout?: Layout; // só em corte de live: webcam em cima, jogo embaixo
 };
 
 export type SeloProps = { lado: "esq" | "dir"; cor: string };

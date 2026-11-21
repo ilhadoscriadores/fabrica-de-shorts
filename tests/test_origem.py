@@ -218,7 +218,7 @@ def test_legenda_vazia_com_transcrever_transcreve(monkeypatch, tmp_path):
     monkeypatch.setattr(origem, "_esperar", lambda s: None)
     _servir(monkeypatch, [b""])
     monkeypatch.setattr(transcricao, "transcrever",
-                        lambda audio, saida, modelo, idioma: [{"w": "eu", "s": 1.0, "e": 1.2}, {"w": "tava", "s": 1.3, "e": 1.6}])
+                        lambda audio, saida, modelo, idioma=None, idioma_padrao=None: [{"w": "eu", "s": 1.0, "e": 1.2}, {"w": "tava", "s": 1.3, "e": 1.6}])
     r = origem.legenda("https://youtu.be/abc", tmp_path, "pt", transcrever_se_faltar=True)
     assert r.get("transcrito") is True and baixados
     assert "eu tava" in (tmp_path / "abc.txt").read_text(encoding="utf-8")
@@ -363,3 +363,12 @@ def test_baixar_falha_duas_vezes_da_erro_curto(monkeypatch, tmp_path):
     msg = str(e.value)
     assert msg.startswith("não consegui baixar o trecho") and "Traceback" not in msg and len(msg) < 300
     assert not list(tmp_path.glob("bruto*"))  # nada pela metade que pareça um bruto pronto
+
+
+def test_escolher_legenda_prefere_a_original_a_traduzida_para_o_canal():
+    """Vídeo em inglês num canal pt: a automática 'pt' é tradução; a 'en-orig' é a fala de verdade."""
+    from fabrica import origem
+    info = {"automatic_captions": {"pt": [{"ext": "vtt", "url": "u-pt"}], "en-orig": [{"ext": "vtt", "url": "u-en"}]}}
+    assert origem.escolher_legenda(info, "pt") == ("en-orig", "u-en")
+    info["automatic_captions"]["pt-orig"] = [{"ext": "vtt", "url": "u-pt-orig"}]
+    assert origem.escolher_legenda(info, "pt") == ("pt-orig", "u-pt-orig")

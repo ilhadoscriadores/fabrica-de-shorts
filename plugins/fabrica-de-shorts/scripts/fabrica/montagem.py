@@ -103,6 +103,43 @@ def _peito(rostos, top_legenda):
     return int(max(860, min(top_legenda - 140, ys[len(ys) // 2] + 40)))
 
 
+
+# ---------- layout empilhado (live: webcam em cima, jogo embaixo) ----------
+TELA_L, TELA_A = 1080, 1920
+
+
+def layout_empilhado(pasta, corte: dict, largura: int, altura: int) -> dict | None:
+    """{"tipo": "empilhado", "cam", "jogo", "divisao", "foco_cam"} ou None (sem webcam: recorte normal).
+    A webcam vem de corte["webcam"] ([x, y, w, h] em px), do webcam.json ou é achada agora na base.mp4."""
+    if corte.get("layout") != "empilhado":
+        return None
+    pasta = Path(pasta)
+    if corte.get("webcam"):
+        x, y, w, h = [float(v) for v in corte["webcam"]]
+        foco = 0.5
+    else:
+        wc = util.ler_json(pasta / "webcam.json", None) if (pasta / "webcam.json").exists() else None
+        if not wc or wc.get("largura") != largura:
+            from . import rosto
+            wc = rosto.achar_webcam(pasta / "base.mp4")
+            if not wc:
+                return None
+            util.gravar_json(pasta / "webcam.json", wc)
+        x, y, w, h = wc["caixa"]
+        foco = wc["rosto"]["cx"]
+    # painel de cima no formato da webcam (sem cortar quase nada dela), entre 28% e 42% da tela
+    h_top = min(max(TELA_L * h / w, TELA_A * 0.28), TELA_A * 0.42)
+    divisao = round(h_top / TELA_A, 4)
+    # jogo: altura toda da base, largura no formato do painel de baixo, no centro e fora da webcam
+    jw = min(largura, altura * TELA_L / (TELA_A - h_top))
+    jx = (largura - jw) / 2
+    if jx < x + w and x < jx + jw and y < altura * 0.5:  # cruzou com a webcam: encosta do outro lado dela
+        jx = x + w if x + w / 2 < largura / 2 else x - jw
+        jx = min(max(0.0, jx), largura - jw)
+    return {"tipo": "empilhado", "cam": {"x": round(x), "y": round(y), "w": round(w), "h": round(h)},
+            "jogo": {"x": round(jx), "y": 0, "w": round(jw), "h": altura}, "divisao": divisao, "foco_cam": round(foco, 3)}
+
+
 # ---------- dados.json ----------
 def _biblioteca(pasta_trab, sub, rel):
     return pasta_trab / "biblioteca" / sub / rel
@@ -151,8 +188,16 @@ def montar_dados(pasta_corte) -> dict:
     blocos = legendas.ancorar(blocos, pasta / "voz.wav", FPS, duracao=dur)
     util.gravar_json(pasta / "legendas.json", blocos, indent=None)
     preferido = int(canal["estilo"].get("legenda_top", 1180))
-    candidatos = [preferido] + [t for t in TOPOS_LEGENDA if t != preferido]
-    top = min(candidatos, key=lambda t: (len(legenda_em_cima_do_rosto(blocos, t, rostos)), candidatos.index(t)))
+    layout = layout_empilhado(pasta, corte, tl["largura"], tl["altura"])
+    if corte.get("layout") == "empilhado" and not layout:
+        avisos.append("layout empilhado pedido, mas não achei webcam de canto: saiu no recorte normal "
+                      "(passe \"webcam\": [x, y, w, h] no corte.json)")
+    if layout:  # o rosto fica no painel de cima; a legenda vai no jogo, um pouco abaixo da divisão
+        h_top = layout["divisao"] * TELA_A
+        top = preferido if preferido > h_top + 150 else int(h_top + 300)
+    else:
+        candidatos = [preferido] + [t for t in TOPOS_LEGENDA if t != preferido]
+        top = min(candidatos, key=lambda t: (len(legenda_em_cima_do_rosto(blocos, t, rostos)), candidatos.index(t)))
     cor = ed.get("cor") or canal["estilo"]["cor"]
 
     sons = []
@@ -198,7 +243,8 @@ def montar_dados(pasta_corte) -> dict:
         avisos.append("corte sem trilha" + ("" if tem else " (a biblioteca de trilhas está vazia: rode o kit do Mixkit no comecar)"))
 
     g = ed.get("gancho")
-    marca_top = _peito(rostos, top)
+    marca_top = _peito(rostos, top) if not layout else TELA_A - 260
+    etq_top = int(layout["divisao"] * TELA_A + 60) if layout else 300  # empilhado: logo abaixo da webcam
     dados = {
         "fps": FPS, "duracaoFrames": frames,
         "base": {"src": f"{cid}/base.mp4", "largura": tl["largura"], "altura": tl["altura"]},
@@ -208,12 +254,14 @@ def montar_dados(pasta_corte) -> dict:
         "gancho": {"texto": g["texto"], "emoji": g.get("emoji"), "f0": 0, "f1": f(g.get("ate", 3.0))} if g else None,
         "credito": {"texto": ed["credito"], "f1": f(4.6)} if ed.get("credito") else None,
         "imagens": imagens,
-        "etiquetas": [{"f0": f(e["s"]), "f1": f(e["e"]), "texto": e["texto"], "emoji": e.get("emoji"), "top": int(e.get("top", 300))}
+        "etiquetas": [{"f0": f(e["s"]), "f1": f(e["e"]), "texto": e["texto"], "emoji": e.get("emoji"), "top": int(e.get("top", etq_top))}
                       for e in ed.get("etiquetas", [])],
         "marca": {"texto": canal["arroba"].upper(), "top": marca_top, "opacidade": float(canal["estilo"].get("marca_opacidade", 0.08))}
         if canal.get("arroba") else None,
         "sons": sons, "trilha": trilha, "selo": None,
     }
+    if layout:
+        dados["layout"] = layout
     for b in dados["legenda"]["blocos"]:
         for p in b["palavras"]:
             p.pop("s", None)

@@ -13,7 +13,7 @@ import {
   useVideoConfig,
 } from "remotion";
 import { caber, FONTE, medir } from "./fontes";
-import type { Bloco, Dados, Etiqueta, Imagem } from "./tipos";
+import type { Bloco, Caixa, Dados, Etiqueta, Imagem, Layout } from "./tipos";
 
 // Corte 9:16 desenhado só a partir do dados.json (nada por vídeo aqui).
 
@@ -41,8 +41,50 @@ const posCamera = (cam: Ponto[], frame: number) => {
   return { cx: a.cx + (b.cx - a.cx) * p, cy: a.cy + (b.cy - a.cy) * p };
 };
 
+// ---------- live: webcam em cima, jogo embaixo ----------
+const Painel: React.FC<{ src: string; bw: number; bh: number; caixa: Caixa; top: number; altura: number; foco: number; zoom: boolean }> = ({
+  src, bw, bh, caixa, top, altura, foco, zoom,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const k = Math.max(W / caixa.w, altura / caixa.h); // a caixa cobre o painel inteiro
+  const visivelW = W / k;
+  const x0 = limitar(caixa.x + foco * caixa.w - visivelW / 2, caixa.x, caixa.x + caixa.w - visivelW);
+  const y0 = caixa.y + (caixa.h - altura / k) / 2;
+  const s = zoom ? 1.04 + 0.03 * Math.sin((2 * Math.PI * (frame / fps)) / 11 - Math.PI / 2) : 1;
+  return (
+    <div style={{ position: "absolute", left: 0, top, width: W, height: altura, overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, transform: `scale(${s})`, transformOrigin: "50% 50%" }}>
+        <div style={{ position: "absolute", left: -x0 * k, top: -y0 * k, width: bw * k, height: bh * k }}>
+          <OffthreadVideo src={src} volume={0} style={{ width: "100%", height: "100%" }} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FundoEmpilhado: React.FC<{ L: Layout }> = ({ L }) => {
+  const D = useD();
+  const src = staticFile(D.base.src);
+  const hTop = Math.round(H * L.divisao);
+  return (
+    <AbsoluteFill style={{ backgroundColor: "black" }}>
+      {/* o som sai uma vez só, por este vídeo escondido */}
+      <OffthreadVideo src={src} volume={1} style={{ position: "absolute", width: 2, height: 2, opacity: 0 }} />
+      <Painel src={src} bw={D.base.largura} bh={D.base.altura} caixa={L.cam} top={0} altura={hTop} foco={L.foco_cam} zoom={false} />
+      <Painel src={src} bw={D.base.largura} bh={D.base.altura} caixa={L.jogo} top={hTop} altura={H - hTop} foco={0.5} zoom={D.zoom} />
+      <div style={{ position: "absolute", left: 0, top: hTop - 4, width: W, height: 8, background: D.cor }} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------- fundo: vídeo recortado em 9:16 com zoom lento ----------
 const Fundo: React.FC = () => {
+  const D = useD();
+  return D.layout ? <FundoEmpilhado L={D.layout} /> : <FundoRecortado />;
+};
+
+const FundoRecortado: React.FC = () => {
   const D = useD();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();

@@ -121,6 +121,12 @@ def validar_corte(corte: dict, pasta_corte, etapa: str = "base") -> list[str]:
     for i, x in enumerate(c["correcoes"], 1):
         if not isinstance(x, dict) or not {"t", "de", "para"} <= set(x):
             erros.append(f"correção {i}: use {{\"t\": segundo, \"de\": \"errada\", \"para\": \"certa\"}}")
+    if c.get("layout") not in (None, "normal", "empilhado"):
+        erros.append("layout tem que ser \"normal\" (podcast) ou \"empilhado\" (live: webcam em cima, jogo embaixo)")
+    wc = c.get("webcam")
+    if wc is not None and not (isinstance(wc, list) and len(wc) == 4 and all(isinstance(v, (int, float)) and v >= 0 for v in wc)
+                               and wc[2] > 0 and wc[3] > 0):
+        erros.append("webcam tem que ser [x, y, largura, altura] em pixels do vídeo original")
     if etapa == "render":
         erros += _validar_edicao(c.get("edicao") or {}, pasta_corte)
     return erros

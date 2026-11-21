@@ -1,4 +1,4 @@
-"""Achar a origem do corte: legenda do YouTube, busca do episódio, localizar o trecho e baixar só ele."""
+"""Achar a origem do corte: legenda do YouTube (ou o som, para live), busca do episódio, localizar o trecho e baixar só ele."""
 from __future__ import annotations
 
 import html
@@ -7,7 +7,7 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from . import util
+from . import origem_audio, util
 
 _YDL = None  # trocado nos testes
 ESPERAS_LEGENDA = (5, 15)  # novas tentativas quando a legenda vem sem fala
@@ -172,16 +172,18 @@ def links_da_descricao(texto, ignorar: str | None = None) -> list[str]:
 
 
 def escolher_legenda(info: dict, idioma: str):
-    """Uma legenda só (baixar várias dá 429): manual no idioma, automática original, automática no idioma."""
+    """Uma legenda só (baixar várias dá 429): manual no idioma, automática original (na língua da fala),
+    e só por último a automática traduzida para o idioma do canal (vídeo em inglês sairia traduzido)."""
     manuais = info.get("subtitles") or {}
     autos = info.get("automatic_captions") or {}
 
     def vtt(lista):
         return next((f.get("url") for f in lista or [] if f.get("ext") == "vtt" and f.get("url")), None)
 
-    ordem = [(manuais, idioma), (manuais, f"{idioma}-BR"), (autos, f"{idioma}-orig"), (autos, idioma)]
+    ordem = [(manuais, idioma), (manuais, f"{idioma}-BR"), (autos, f"{idioma}-orig")]
     ordem += [(manuais, k) for k in manuais if k.startswith(idioma)]
     ordem += [(autos, k) for k in autos if k.endswith("-orig")]
+    ordem += [(autos, idioma)]
     for fonte, chave in ordem:
         u = vtt(fonte.get(chave))
         if u:
@@ -248,7 +250,8 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
             else:
                 vazia = True
     dados = {"id": vid, "titulo": info.get("title"), "canal": info.get("channel") or info.get("uploader"),
-             "duracao": info.get("duration"), "views": info.get("view_count"), "data": info.get("upload_date"),
+             "duracao": info.get("duration"), "views": info.get("view_count"), "curtidas": info.get("like_count"),
+             "data": info.get("upload_date"),
              "descricao": (info.get("description") or "")[:600]}
     links = links_da_descricao(info.get("description"), ignorar=vid)
     if links:
@@ -269,7 +272,7 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
             y.extract_info(url, download=True)
         achados = sorted(pasta.glob(f"{vid}.*"), key=lambda p: p.stat().st_mtime)
         audio = next((p for p in reversed(achados) if p.suffix not in (".txt", ".json", ".vtt")), audio)
-        palavras = transcricao.transcrever(audio, pasta / f"{vid}.words.json", modelo="small", idioma=idioma)
+        palavras = transcricao.transcrever(audio, pasta / f"{vid}.words.json", modelo="small", idioma_padrao=idioma)
         gravar_txt(transcricao.linhas(palavras), txt)
         dados.update(txt=str(txt), transcrito=True)
     else:
@@ -333,21 +336,96 @@ def buscar(termo: str, limite: int = 10, longos: bool = False, idioma: str = "pt
     return out[:limite]
 
 
-def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, candidatos=None) -> dict:
-    """Legenda do corte modelo → busca (ou candidatos) → legenda de cada episódio → onde o trecho está."""
+MAX_VODS = 4  # página de vídeos de um canal de live vira as últimas VODs (cada uma baixa ~90 MB de som por hora)
+
+
+def expandir_candidatos(lista, idioma: str = "pt", maximo: int = MAX_VODS) -> list[str]:
+    """Link de canal/página de vídeos (Twitch, Kick...) vira as últimas VODs; link de vídeo fica como está."""
+    out = []
+    for u in lista:
+        if origem_audio.e_youtube(u) or re.search(r"/videos?/\d+|/video/|/v/", u):
+            out.append(u)
+            continue
+        try:
+            with _ydl(opcoes_ydl(idioma, extract_flat=True, skip_download=True, playlistend=maximo)) as y:
+                info = y.extract_info(u, download=False)
+        except Exception:
+            out.append(u)
+            continue
+        ents = [e for e in (info.get("entries") or []) if e]
+        out += [e.get("url") or e.get("webpage_url") for e in ents[:maximo]] if ents else [u]
+    return [u for u in out if u]
+
+
+def _dica(ref: dict, modelo_url: str) -> str:
+    texto = f"{ref.get('titulo') or ''} {ref.get('descricao') or ''}".lower()
+    canal = (ref.get("canal") or "").strip()
+    if "twitch" in texto and canal:
+        exemplo = f"https://www.twitch.tv/{canal.lower()}/videos"
+        return (f"Não achei no YouTube. O corte parece de live na Twitch: rode `FAB achar {modelo_url} --candidatos {exemplo}` "
+                "(compara o som das últimas lives; baixa só o áudio, ~90 MB por hora).")
+    return ("Não achei. A busca e a legenda são só do YouTube. Se o corte veio de uma live (Twitch, Kick) ou de um vídeo sem legenda, "
+            f"passe a VOD ou a página de vídeos do canal: `FAB achar {modelo_url} --candidatos <link>` (compara o som). "
+            "Ou tente outro termo no --busca (nome do convidado, do podcast, do canal).")
+
+
+def _data_utc(ts) -> str | None:
+    import datetime as dt
+    try:
+        return dt.datetime.fromtimestamp(int(ts), dt.timezone.utc).strftime("%Y%m%d")
+    except (TypeError, ValueError, OSError):
+        return None
+
+
+def _por_audio(url: str, modelo_url: str, pasta: Path, ref_audio: list, data_modelo: str | None = None) -> dict:
+    """Uma VOD (ou vídeo sem legenda): baixa o som e procura o som do corte modelo."""
+    import numpy as np
+    from . import origem_audio as oa
+    with _ydl({"quiet": True, "no_warnings": True, "skip_download": True}) as y:
+        info = y.extract_info(url, download=False)
+    dados = {"url": url, "titulo": info.get("title"), "canal": info.get("channel") or info.get("uploader"),
+             "duracao": info.get("duration")}
+    data_vod = info.get("upload_date") or _data_utc(info.get("timestamp"))
+    if data_modelo and data_vod and data_vod > data_modelo:  # live depois do corte: não pode ser a origem
+        return {**dados, "regioes": [], "pulada": f"começou em {data_vod}, depois do corte ({data_modelo})"}
+    if not ref_audio:
+        ref_audio.append(oa.ler(oa.baixar_audio(modelo_url, pasta, _ydl)))
+    if (info.get("duration") or 0) and info["duration"] < len(ref_audio[0]) / oa.SR:
+        return {**dados, "regioes": []}
+    ep = oa.ler(oa.baixar_audio(url, pasta, _ydl))
+    if not len(ep) or not np.any(ep):
+        return {**dados, "erro": "o áudio da VOD veio vazio ou mudo"}
+    return {**dados, "regioes": oa.localizar(ref_audio[0], ep)}
+
+
+def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, candidatos=None, audio: bool = False) -> dict:
+    """Legenda do corte modelo → busca (ou candidatos) → legenda de cada episódio → onde o trecho está.
+    Candidato que não é do YouTube (VOD da Twitch, Kick...) ou `audio=True`: compara o som em vez da legenda."""
     pasta = Path(pasta)
-    ref = legenda(modelo_url, pasta, idioma, transcrever_se_faltar=True)
-    if not ref.get("txt"):
-        raise util.ErroUsuario("não consegui o texto do corte modelo")
-    ref_palavras = " ".join(x for _, x in ler_linhas(ref["txt"])).split()
-    lista = list(candidatos or [])
+    lista = expandir_candidatos(list(candidatos or []), idioma)
+    pelo_som = audio or any(not origem_audio.e_youtube(u) for u in lista)
+    try:
+        ref = legenda(modelo_url, pasta, idioma, transcrever_se_faltar=True)
+    except Exception:
+        if not pelo_som:
+            raise
+        ref = {}
+    if not ref.get("txt") and not pelo_som:
+        raise util.ErroUsuario("não consegui o texto do corte modelo. " + _dica(ref, modelo_url))
+    ref_palavras = " ".join(x for _, x in ler_linhas(ref["txt"])).split() if ref.get("txt") else []
     if not lista:  # o "vídeo completo: <link>" da descrição do Short vem antes da busca
         lista = list(ref.get("links_na_descricao") or [])
         if busca:
             lista += [u for u in (c["url"] for c in buscar(busca, limite=4, longos=True, idioma=idioma)) if u not in lista]
-    resultados = []
+    resultados, ref_audio = [], []
     for url in lista[:5]:
         try:
+            if audio or not origem_audio.e_youtube(url):
+                r = _por_audio(url, modelo_url, pasta, ref_audio, ref.get("data"))
+                resultados.append(r)
+                if any(g["acertos"] >= 2 for g in r.get("regioes") or []):
+                    break  # achou com folga: não baixa as outras lives
+                continue
             ep = legenda(url, pasta, idioma)
         except util.ErroComando as e:
             resultados.append({"url": url, "erro": str(e)[:200]})
@@ -362,8 +440,11 @@ def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, 
             continue
         resultados.append({**dados, "regioes": localizar(ref_palavras, ler_linhas(texto))})
     resultados.sort(key=lambda r: -(r.get("regioes") or [{"acertos": 0}])[0]["acertos"])
-    return {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "data", "descricao", "links_na_descricao", "txt")},
-            "episodios": resultados}
+    saida = {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "curtidas", "data", "descricao", "links_na_descricao", "txt")},
+             "episodios": resultados}
+    if not any(r.get("regioes") for r in resultados):
+        saida["dica"] = _dica(ref, modelo_url)
+    return saida
 
 
 # ---------- baixar só o trecho ----------
@@ -438,9 +519,11 @@ def registrar(sub):
         " ".join(x for _, x in ler_linhas(a.ref)).split(), ler_linhas(a.episodio))})
 
     p = sub.add_parser("achar", help="corte modelo → episódio original e minuto (legenda + busca + localizar)")
-    p.add_argument("modelo"); p.add_argument("--busca"); p.add_argument("--candidatos", nargs="*")
+    p.add_argument("modelo"); p.add_argument("--busca")
+    p.add_argument("--candidatos", nargs="*", help="vídeos, VODs ou a página de vídeos de um canal de live")
+    p.add_argument("--audio", action="store_true", help="compara o som em vez da legenda (vídeo sem legenda)")
     p.add_argument("--pasta", default="mineracao")
-    p.set_defaults(func=lambda a: {"ok": True, **achar(a.modelo, a.pasta, _idioma(), a.busca, a.candidatos)})
+    p.set_defaults(func=lambda a: {"ok": True, **achar(a.modelo, a.pasta, _idioma(), a.busca, a.candidatos, a.audio)})
 
     p = sub.add_parser("baixar", help="baixa só o trecho do episódio (com margem) para cortes/NNN/bruto.mp4")
     p.add_argument("url"); p.add_argument("inicio"); p.add_argument("fim")

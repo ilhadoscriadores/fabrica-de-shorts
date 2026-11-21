@@ -247,7 +247,7 @@ def base(pasta_corte, rosto: bool = True) -> dict:
     if not ws:
         raise util.ErroUsuario("a transcrição (palavras.json) está vazia ou não existe: rode o transcrever antes")
     ws = aplicar_correcoes(ws, corte["correcoes"])
-    cens = achar_censuras(ws, corte["censurar"], canal["idioma"], canal["opcoes"].get("censurar_palavroes", True))
+    cens = achar_censuras(ws, corte["censurar"], transcricao.idioma_do_corte(pasta) or canal["idioma"], canal["opcoes"].get("censurar_palavroes", True))
     for i in cens:
         ws[i] = {**ws[i], "w": mascarar(ws[i]["w"]), "censura": True}
     bruto = pasta / corte.get("bruto", "bruto.mp4")

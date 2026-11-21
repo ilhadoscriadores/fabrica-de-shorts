@@ -18,6 +18,7 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 - **correcoes:** `t` é o segundo aproximado (±1,5 s) e `de` é a palavra errada como o Whisper escreveu (pode ter várias palavras). `para` vazio apaga a palavra; com espaço, vira várias.
 - **censurar:** palavrões comuns já são cortados sozinhos (`opcoes.censurar_palavroes`). Aqui vão os extras.
 - Opcionais: `"espelhar": true` (só neste corte) e `"revisao": {"ignorar": [[a, b]]}` para um trecho preto ou parado de propósito.
+- **Live/gameplay com webcam num canto:** `"layout": "empilhado"` põe a webcam em cima e o jogo embaixo, com a legenda no jogo. A Fábrica acha a webcam sozinha (`FAB webcam CORTE` mostra a caixa em `previa_webcam.jpg`). Errou? Passe `"webcam": [x, y, largura, altura]` em pixels do vídeo original. Sem isso, o recorte segue o rosto, que numa live é o de um personagem do jogo.
 
 ## 2. Edição (tempos do corte final, os do timeline.txt)
 ```json

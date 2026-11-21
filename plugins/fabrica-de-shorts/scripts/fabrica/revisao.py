@@ -156,7 +156,15 @@ def revisar(video, pasta_corte=None, transcrever_de_novo: bool = True) -> dict:
             elif not seg_erros:
                 ok.append("2ª conferência (Whisper no vídeo pronto): legenda no lugar, sem deslocamento")
         top = (dados.get("legenda") or {}).get("top", 1180)
-        if rostos:
+        lay = dados.get("layout")
+        if lay:  # empilhado: o rosto está no painel de cima; os rostos.json (do quadro inteiro) não valem
+            h_top = lay["divisao"] * 1920
+            (ok.append("layout empilhado: webcam em cima, legenda no jogo") if top > h_top + 20
+             else erros.append(f"layout empilhado: a legenda (top {top}) entra na webcam (até {h_top:.0f})"))
+            for e in dados.get("etiquetas", []):
+                if e["top"] < h_top and e["top"] + 110 > h_top * 0.25:
+                    erros.append(f"etiqueta \"{e['texto']}\" em cima da webcam em {e['f0'] / FPS:.1f}s")
+        elif rostos:
             cobre = montagem.legenda_em_cima_do_rosto(blocos, top, rostos)
             (erros.append(f"legenda em cima do rosto em {len(cobre)} blocos (ex.: {cobre[0]['f0'] / FPS:.1f}s)") if cobre
              else ok.append("legenda nunca cobre o rosto"))

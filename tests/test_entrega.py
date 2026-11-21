@@ -129,3 +129,19 @@ def test_baixar_kit_grava_licenca(tmp_path, monkeypatch):
     lic = (tmp_path / "biblioteca" / "LICENCAS.md").read_text(encoding="utf-8")
     assert "Mixkit" in lic and "trilhas/comedia/" in lic
     assert any((tmp_path / "biblioteca" / "trilhas" / "comedia").iterdir())
+
+
+def test_postagem_sem_views_usa_curtidas_e_nao_quebra(tmp_path):
+    """Instagram não informa views: views null não pode derrubar o postagem."""
+    from fabrica import entrega, util
+    for modelo, esperado, proibido in (
+        ({"url": "https://www.instagram.com/reel/X/", "titulo": "T", "canal": "c", "views": None, "curtidas": 232831},
+         "232.831 curtidas", "views"),
+        ({"url": "https://www.instagram.com/reel/X/", "titulo": "T", "canal": "c", "views": None}, "· c", "0 views"),
+    ):
+        c = tmp_path / ("c" + str(len(esperado)))
+        c.mkdir()
+        util.gravar_json(c / "corte.json", {"modelo": modelo, "postagem": {"titulo": "T", "hashtags": []}})
+        txt = entrega.postagem(c).read_text(encoding="utf-8")
+        linha = next(l for l in txt.splitlines() if l.startswith('  "T"'))
+        assert esperado in linha and proibido not in linha

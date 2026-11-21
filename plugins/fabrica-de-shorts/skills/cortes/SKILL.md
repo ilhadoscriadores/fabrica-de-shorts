@@ -27,11 +27,11 @@ allowed-tools:
 
 ## Passos
 1. **Minerar:** `FAB minerar` (pule se mandaram o link do corte). Escolha um corte: história com virada, 60–90 s, de preferência `novo` e nunca `FEITO`; diga em 3 linhas por quê. No 1º corte, mostre 2 ou 3 opções e deixe escolher.
-2. **Origem:** `FAB achar <url do corte> --busca "<convidado ou podcast>"`. Confira o episódio e as `regioes` (onde a fala aparece). Não achou? Leia `referencias/achar-origem.md`.
+2. **Origem:** `FAB achar <url do corte> --busca "<convidado ou podcast>"`. Confira o episódio e as `regioes` (onde a fala aparece). Não achou? Siga a `dica` que o comando devolve e leia `referencias/achar-origem.md`. Corte de **live** (Twitch, Kick): `FAB achar <url do corte> --candidatos <página de vídeos do canal>` compara o som das últimas lives.
 3. **Pasta:** `FAB novo-corte "<nome curto>"` → CORTE (cronômetro desde o minerar).
 4. **Baixar:** `FAB baixar <url do episódio> <início> <fim> --corte CORTE` cobrindo as regiões (até ~6 min).
-5. **Transcrever:** `FAB transcrever --corte CORTE`; leia `CORTE/transcricao.txt`.
-6. **Plano:** escreva `CORTE/corte.json` seguindo `referencias/plano-do-corte.md` (trechos no tempo do bruto, começa no gancho, termina na virada, 60–90 s; corrija nomes e gírias que o Whisper errou).
+5. **Transcrever:** `FAB transcrever --corte CORTE`; leia `CORTE/transcricao.txt`. O idioma sai da fala (`idioma_da_fala`), nunca traduzido: fala em inglês gera legenda em inglês, e o bip usa os palavrões desse idioma. Escreva gancho, título e descrição no idioma do canal.
+6. **Plano:** escreva `CORTE/corte.json` seguindo `referencias/plano-do-corte.md` (trechos no tempo do bruto, começa no gancho, termina na virada, 60–90 s; corrija nomes e gírias que o Whisper errou). Live com webcam num canto: `"layout": "empilhado"` (webcam em cima, jogo embaixo); confira com `FAB webcam CORTE` (grava `previa_webcam.jpg`).
 7. **Base:** `FAB base CORTE` → leia `CORTE/timeline.txt` (tempos do corte final).
 8. **Só no 1º corte:** ache 4 referências de edição com muita view (2 do nicho + 2 de fora do nicho ou do país; `FAB buscar "<termo>"`), link + 1 linha do que copiar (legenda, ritmo, zoom, efeitos, capa), junto com os canais admirados. Proponha cor, legenda e efeitos e **espere o OK**. Grave o que ficou no `canal.json` e no GUIA e marque `estilo_aprovado: true`. Ofereça o espelhar (desligado).
 9. **Edição:** complete `edicao` e `postagem` no corte.json (`FAB biblioteca` mostra efeitos e trilhas e marca os usados nos últimos cortes: varie). Imagens: escreva `CORTE/imagens/prompts.txt` (`nome|cena`, sem pessoa real, sem texto) e rode `FAB imagens --corte CORTE`; as que faltarem ficam fora e o FALTANDO.md explica.
