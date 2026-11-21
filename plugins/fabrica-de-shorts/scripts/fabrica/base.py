@@ -7,7 +7,9 @@ import math
 import re
 from pathlib import Path
 
-from . import ambiente, config, transcricao, util
+import numpy as np
+
+from . import ambiente, config, legendas, transcricao, util
 
 FPS = 30
 SR = 48000
@@ -87,7 +89,7 @@ def _grade(x: float, fps: int, para_cima: bool) -> float:
 
 
 def calcular_keep(ws: list[dict], trechos, pausa_max: float, fps: int = FPS) -> list[list[float]]:
-    keep = []
+    keep = []  # [início, fim, começo da palavra seguinte]
     for a, b in trechos:
         dentro = [i for i, w in enumerate(ws) if w["s"] >= a - 0.25 and w["e"] <= b + 0.25 and w["e"] > a and w["s"] < b]
         if not dentro:
@@ -103,11 +105,16 @@ def calcular_keep(ws: list[dict], trechos, pausa_max: float, fps: int = FPS) -> 
         for i in range(i0, i1 + 1):
             w = ws[i]
             if prev_e is not None and w["s"] - prev_e > pausa_max:
-                keep.append([cur, min(prev_e + 0.14, w["s"] - ANTES)])
+                keep.append([cur, min(prev_e + 0.14, w["s"] - ANTES), w["s"]])
                 cur = w["s"] - ANTES
             prev_e = w["e"]
-        keep.append([cur, fim])
-    grade = [[_grade(max(0.0, s), fps, False), _grade(e, fps, True)] for s, e in keep]
+        keep.append([cur, fim, ws[i1 + 1]["s"] if i1 + 1 < len(ws) else math.inf])
+    grade = []
+    for s, e, prox in keep:
+        fim = _grade(e, fps, True)
+        if fim > prox - 0.005:  # para cima entraria no começo da palavra seguinte (legenda sem áudio)
+            fim = _grade(e, fps, False)
+        grade.append([_grade(max(0.0, s), fps, False), fim])
     juntos = []
     for s, e in grade:
         if juntos and s <= juntos[-1][1] + 1e-9:
@@ -115,6 +122,53 @@ def calcular_keep(ws: list[dict], trechos, pausa_max: float, fps: int = FPS) -> 
         elif e - s >= 2 / fps - 1e-9:
             juntos.append([s, e])
     return [[round(s * fps) / fps, round(e * fps) / fps] for s, e in juntos]
+
+
+def refinar_keep(keep, env, pausa_max: float, fps: int = FPS, passo: float = 0.01, folga: float = 0.07):
+    """O Whisper às vezes estica uma palavra por cima de um silêncio: a pausa não sai e a legenda fica sem voz.
+    Todo silêncio do áudio com pausa_max + 0,15 s ou mais dentro de um pedaço sai, deixando 0,07 s de cada lado."""
+    if env is None or not len(env):
+        return keep
+    _, off = legendas.limiar(env)
+    mudo = np.asarray(env) < off
+    minimo = pausa_max + 0.15
+    out = []
+    for s, e in keep:
+        pedacos, cur = [], s
+        k, k1 = math.ceil(s / passo - 1e-6), min(len(mudo), math.floor(e / passo + 1e-6))
+        while k < k1 and cur is not None:
+            if not mudo[k]:
+                k += 1
+                continue
+            j = k
+            while j < k1 and mudo[j]:
+                j += 1
+            a, b = k * passo, j * passo
+            if b - a >= minimo - 1e-9:
+                if a - cur > passo:  # tem voz antes: fecha o pedaço com folga
+                    pedacos.append([cur, min(e, _grade(a + folga, fps, True))])
+                cur = None if j >= k1 else max(cur, _grade(b - folga, fps, False))
+            k = j
+        if cur is not None:
+            pedacos.append([cur, e])
+        pedacos = [[x, y] for x, y in pedacos if y - x >= 2 / fps - 1e-9]
+        out += pedacos or [[s, e]]  # pedaço todo "mudo" (limiar errado?): fica como estava
+    return [[round(x * fps) / fps, round(y * fps) / fps] for x, y in out]
+
+
+def palavras_no_corte(ws: list[dict], keep) -> list[dict]:
+    """Palavras no tempo do corte final. Só entra a que começa dentro de um pedaço e tem pelo menos
+    min(0,08 s, metade dela) lá dentro: a que só encosta no fim do pedaço não tem áudio."""
+    out = []
+    for w in ws:
+        minimo = min(0.08, (w["e"] - w["s"]) / 2)
+        dentro = next(((s, e) for s, e in keep
+                       if s - 0.01 <= w["s"] <= e and min(w["e"], e) - max(w["s"], s) >= minimo - 1e-9), None)
+        if dentro:
+            out.append({"w": w["w"], "s": round(remap(keep, w["s"]), 3),
+                        "e": round(remap(keep, min(w["e"], dentro[1])), 3), "orig": w["s"],
+                        "censura": bool(w.get("censura"))})
+    return out
 
 
 def remap(keep, t: float) -> float:
@@ -159,7 +213,9 @@ def base(pasta_corte, rosto: bool = True) -> dict:
     cens = achar_censuras(ws, corte["censurar"], canal["idioma"], canal["opcoes"].get("censurar_palavroes", True))
     for i in cens:
         ws[i] = {**ws[i], "w": mascarar(ws[i]["w"]), "censura": True}
+    bruto = pasta / corte.get("bruto", "bruto.mp4")
     keep = calcular_keep(ws, corte["trechos"], corte["pausa_max"])
+    keep = refinar_keep(keep, util.envelope_db(bruto, sr=16000), corte["pausa_max"])
     total = round(sum(e - s for s, e in keep), 6)
     cens_final = [[round(remap(keep, ws[i]["s"] - 0.02), 3), round(remap(keep, ws[i]["e"] + 0.02), 3)] for i in cens
                   if any(s - 0.01 <= ws[i]["s"] <= e for s, e in keep)]
@@ -167,19 +223,13 @@ def base(pasta_corte, rosto: bool = True) -> dict:
     enc = ambiente.encoder_video(pasta=config.pasta_trabalho(pasta))
     if enc[1] == "libx264":
         enc = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "16"]
-    util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(pasta / corte.get("bruto", "bruto.mp4")),
+    util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(bruto),
                 "-filter_complex", _filtro(keep, cens_final, espelhar),
                 "-map", "[vout]", "-map", "[a1]", *enc, "-r", str(FPS), "-c:a", "aac", "-b:a", "192k", "-ar", str(SR),
                 str(pasta / "base.mp4"),
                 "-map", "[a2]", "-ac", "1", "-c:a", "pcm_f32le", "-ar", str(SR), str(pasta / "voz.wav")])
     info = util.sondar(pasta / "base.mp4")
-    tl_ws = []
-    for i, w in enumerate(ws):
-        dentro = next(((s, e) for s, e in keep if s - 0.01 <= w["s"] <= e), None)
-        if dentro:
-            tl_ws.append({"w": w["w"], "s": round(remap(keep, w["s"]), 3),
-                          "e": round(remap(keep, min(w["e"], dentro[1])), 3), "orig": w["s"],
-                          "censura": bool(w.get("censura"))})
+    tl_ws = palavras_no_corte(ws, keep)
     util.gravar_json(pasta / "timeline.json", {"duracao": total, "keep": keep, "censuras": cens_final,
                                                "largura": info["largura"], "altura": info["altura"],
                                                "espelhado": espelhar, "palavras": tl_ws})
