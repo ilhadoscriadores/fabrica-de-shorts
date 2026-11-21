@@ -5,12 +5,12 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 ## 1. Plano (tempos no bruto.mp4, os do transcricao.txt)
 ```json
 {
-  "modelo": {"url": "https://www.youtube.com/shorts/68L5Flrr0Mo", "titulo": "PM HONORIO CONTA...", "canal": "Justiceiro Cortes", "views": 3754517},
-  "origem": {"url": "https://www.youtube.com/watch?v=ng-Q6ZD0XmI", "podcast": "Fala Glauber Podcast #183", "convidado": "Sgt. Honório"},
+  "modelo": {"url": "https://www.youtube.com/shorts/XXXXXXXXXXX", "titulo": "SARGENTO CONTA O DIA EM QUE A VIATURA FICOU SEM FREIO", "canal": "Cortes Exemplo", "views": 1250000},
+  "origem": {"url": "https://www.youtube.com/watch?v=XXXXXXXXXXX", "podcast": "Podcast Exemplo #100", "convidado": "Sgt. Fulano"},
   "trechos": [[20.8, 61.9], [228.4, 241.4], [246.5, 301.9]],
   "pausa_max": 0.35,
-  "correcoes": [{"t": 51.8, "de": "gripe", "para": "Gripp."}, {"t": 240.8, "de": "bop", "para": "BOPE"}],
-  "censurar": [{"t": 255.7, "palavra": "neguinho"}]
+  "correcoes": [{"t": 51.8, "de": "beltrão", "para": "Beltrano."}, {"t": 240.8, "de": "cap", "para": "QAP"}],
+  "censurar": [{"t": 255.7, "palavra": "droga"}]
 }
 ```
 - **trechos:** em ordem; pode juntar 2 a 4 pedaços do mesmo episódio. O primeiro já começa forte (o gancho); o último termina na virada ou na frase de efeito. Total de 60 a 90 s depois de tirar as pausas. Cada linha do `transcricao.txt` é `[início–fim] frase`: o trecho começa no início de uma frase e termina no fim de outra.
@@ -24,14 +24,14 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 "edicao": {
   "clima": "tensao",
   "cor": "#ff3b3b",
-  "gancho": {"texto": "ELE VIU A MORTE NA MATA", "emoji": "😨", "ate": 3.2},
-  "credito": "Sgt. Honório • Fala Glauber #183",
-  "destaques": ["MORTE", "SENHA", "BOPE"],
+  "gancho": {"texto": "A VIATURA FICOU SEM FREIO", "emoji": "😨", "ate": 3.2},
+  "credito": "Sgt. Fulano • Podcast Exemplo #100",
+  "destaques": ["FREIO", "LADEIRA", "VIATURA"],
   "imagens": [
-    {"arquivo": "01_tiros.png", "s": 3.2, "e": 7.7, "entrada": "flash", "movimento": "in-right", "tremidas": [3.4]},
-    {"arquivo": "02_figura.png", "s": 28.7, "e": 33.6, "entrada": "zoom", "movimento": "out", "carimbo": "1987", "sepia": true}
+    {"arquivo": "01_ladeira.png", "s": 3.2, "e": 7.7, "entrada": "flash", "movimento": "in-right", "tremidas": [3.4]},
+    {"arquivo": "02_jornal.png", "s": 28.7, "e": 33.6, "entrada": "zoom", "movimento": "out", "carimbo": "1998", "sepia": true}
   ],
-  "etiquetas": [{"s": 63.3, "e": 66.6, "texto": "DELTA = EQUIPE DO BOPE", "emoji": "⚠️"}],
+  "etiquetas": [{"s": 63.3, "e": 66.6, "texto": "QAP = NA ESCUTA (RÁDIO)", "emoji": "⚠️"}],
   "efeitos": [{"t": 0.0, "arquivo": "impacto/boom-curto.mp3", "vol": 0.45}, {"t": 82.4, "arquivo": "suspense/riser-pulsando.mp3", "vol": 0.4}],
   "trilha": {"arquivo": "tensao/mixkit-epical-drums-02.mp3"},
   "selo": {"inicio": 23.6, "lado": "esq"}
@@ -49,10 +49,10 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 ## 3. Postagem
 ```json
 "postagem": {
-  "titulo": "Gritou a senha do BOPE… e o cara de preto ERROU 😨",
-  "legenda_tiktok": "Ele gritou a senha na mata e o cara respondeu errado 😨 Você atiraria?",
-  "descricao": "Sgt Honório (ex-BOPE) conta o dia em que viu a morte na mata.",
-  "hashtags": ["#bope", "#policia", "#podcast", "#cortes"]
+  "titulo": "A viatura ficou SEM FREIO no meio da ladeira 😨",
+  "legenda_tiktok": "Ele pisou no freio e nada aconteceu 😨 O que você faria?",
+  "descricao": "Sgt. Fulano conta o dia em que a viatura perdeu o freio numa ladeira.",
+  "hashtags": ["#policia", "#podcast", "#cortes", "#historia"]
 }
 ```
 Título curto com 1 palavra quente. O `FAB postagem` junta o crédito do podcast, o link do vídeo original com o minuto, o aviso de imagem por IA, o crédito da música quando a licença pede, a duração e a origem.
