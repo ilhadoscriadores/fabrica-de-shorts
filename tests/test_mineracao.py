@@ -35,7 +35,32 @@ def test_minerar_filtra_e_ordena(monkeypatch, tmp_path):
     assert linhas[0]["recente"] == "nao" and linhas[1]["recente"] == "sim"
     assert linhas[1]["feito"] == "sim" and linhas[0]["feito"] == ""
     assert int(linhas[0]["views"]) == 3_000_000 and linhas[0]["dias"] == "200"
+    inicio = dt.datetime.fromisoformat((pasta / ".fabrica" / "missao_inicio.txt").read_text(encoding="utf-8").strip())
+    assert abs((dt.datetime.now() - inicio).total_seconds()) < 60  # o cronômetro da missão começa aqui
 
 
 def test_sp_dos_filtros():
     assert mineracao.SP == {"mes": "CAMSBAgEGAE%3D", "ano": "CAMSBAgFGAE%3D", "sempre": "CAMSAhgB"}
+
+
+def _linha(i, recente="nao", feito=""):
+    return {"views": str(1_000_000 - i * 1000), "duracao": "60", "dias": "100", "recente": recente,
+            "feito": feito, "canal": f"Canal {i}", "titulo": f"Video {i}", "url": f"https://www.youtube.com/shorts/v{i}"}
+
+
+def test_resumo_mostra_recentes_escondidos():
+    linhas = [_linha(i, recente="sim" if i in (2, 20, 21, 22) else "nao") for i in range(30)]
+    txt = mineracao._resumo(linhas, mostrar=15)
+    topo, recentes = txt.split("Recentes (novo):")
+    assert topo.count("youtube.com") == 15 and any(l.endswith("/v2") for l in topo.splitlines())
+    assert [l.rsplit("/", 1)[1] for l in recentes.strip().splitlines()] == ["v20", "v21", "v22"]
+
+
+def test_resumo_no_maximo_8_recentes():
+    linhas = [_linha(i, recente="sim" if i >= 15 else "nao") for i in range(40)]
+    _, recentes = mineracao._resumo(linhas, mostrar=15).split("Recentes (novo):")
+    assert len(recentes.strip().splitlines()) == 8
+
+
+def test_resumo_sem_recentes_escondidos_nao_tem_secao():
+    assert "Recentes" not in mineracao._resumo([_linha(i) for i in range(5)], mostrar=15)

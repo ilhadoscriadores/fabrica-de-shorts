@@ -11,14 +11,29 @@ from . import config, util
 AGORA = lambda: dt.datetime.now().isoformat(timespec="seconds")  # noqa: E731
 
 
+def _inicio_da_missao(pasta: Path) -> str:
+    """O minerar grava .fabrica/missao_inicio.txt: com menos de 3 h, a missão começou lá (minerar e achar contam)."""
+    marca = pasta / ".fabrica" / "missao_inicio.txt"
+    if not marca.exists():
+        return AGORA()
+    try:
+        ini = dt.datetime.fromisoformat(marca.read_text(encoding="utf-8").strip())
+        idade = (dt.datetime.now() - ini).total_seconds()
+    except (ValueError, OSError):
+        idade = None
+    marca.unlink(missing_ok=True)
+    return ini.isoformat(timespec="seconds") if idade is not None and 0 <= idade < 3 * 3600 else AGORA()
+
+
 def novo_corte(pasta, nome: str) -> Path:
     cortes = Path(pasta) / "cortes"
     cortes.mkdir(parents=True, exist_ok=True)
     nums = [int(m.group(1)) for p in cortes.iterdir() if p.is_dir() and (m := re.match(r"(\d{3})-", p.name))]
     destino = cortes / f"{max(nums, default=0) + 1:03d}-{util.slug(nome)}"
+    inicio = _inicio_da_missao(Path(pasta))
     destino.mkdir()
     (destino / "imagens").mkdir()
-    (destino / "tempos.csv").write_text(f"etapa,inicio,segundos,status\nmissao,{AGORA()},0,inicio\n",
+    (destino / "tempos.csv").write_text(f"etapa,inicio,segundos,status\nmissao,{inicio},0,inicio\n",
                                         encoding="utf-8", newline="\n")
     return destino
 
@@ -137,8 +152,9 @@ def postagem(pasta_corte) -> Path:
     trab = config.pasta_trabalho(pasta)
     tags = " ".join(p.get("hashtags", []))
     link = origem.get("url", "")
-    if link and origem.get("inicio_real") is not None:
-        link += ("&" if "?" in link else "?") + f"t={int(origem['inicio_real'])}s"
+    if link and origem.get("inicio_real") is not None:  # o minuto onde o corte começa, não o começo do bruto
+        primeiro = (corte.get("trechos") or [[0, 0]])[0][0]
+        link += ("&" if "?" in link else "?") + f"t={int(origem['inicio_real'] + primeiro)}s"
     desc = [p.get("descricao", "").strip()]
     if origem.get("titulo"):
         desc.append(f"Corte do {origem.get('canal') or 'podcast'}: {origem['titulo']}")

@@ -1,3 +1,4 @@
+import datetime as dt
 import json
 
 from fabrica import biblioteca, entrega, imagens, util
@@ -9,6 +10,26 @@ def test_novo_corte_numera(tmp_path):
     p = entrega.novo_corte(tmp_path, "Sgt Honório: a senha!")
     assert p.name == "008-sgt-honorio-a-senha"
     assert (p / "tempos.csv").read_text(encoding="utf-8").splitlines()[1].startswith("missao,")
+
+
+def test_novo_corte_comeca_a_missao_no_minerar(tmp_path):
+    (tmp_path / ".fabrica").mkdir()
+    inicio = (dt.datetime.now() - dt.timedelta(minutes=12)).isoformat(timespec="seconds")
+    (tmp_path / ".fabrica" / "missao_inicio.txt").write_text(inicio, encoding="utf-8")
+    p = entrega.novo_corte(tmp_path, "x")
+    assert (p / "tempos.csv").read_text(encoding="utf-8").splitlines()[1] == f"missao,{inicio},0,inicio"
+    assert not (tmp_path / ".fabrica" / "missao_inicio.txt").exists()
+    assert entrega.tempo(p, "ver")["total_s"] >= 12 * 60
+
+
+def test_novo_corte_ignora_inicio_velho(tmp_path):
+    (tmp_path / ".fabrica").mkdir()
+    velho = (dt.datetime.now() - dt.timedelta(hours=4)).isoformat(timespec="seconds")
+    (tmp_path / ".fabrica" / "missao_inicio.txt").write_text(velho, encoding="utf-8")
+    p = entrega.novo_corte(tmp_path, "x")
+    assert velho not in (p / "tempos.csv").read_text(encoding="utf-8")
+    assert entrega.tempo(p, "ver")["total_s"] < 60
+    assert not (tmp_path / ".fabrica" / "missao_inicio.txt").exists()
 
 
 def test_tempo_inicio_fim(tmp_path):
@@ -42,6 +63,16 @@ def test_postagem_tem_credito_e_origem(tmp_path):
     assert "Heroic Age" in txt
     assert "1min29" in txt
     assert "3.754.517" in txt and "68L5Flrr0Mo" in txt
+
+
+def test_postagem_link_no_comeco_do_primeiro_trecho(tmp_path):
+    c = tmp_path / "cortes" / "001-x"
+    c.mkdir(parents=True)
+    util.gravar_json(c / "origem.json", {"url": "https://www.youtube.com/watch?v=abc", "inicio_real": 12032})
+    util.gravar_json(c / "corte.json", {"trechos": [[50.6, 80.0], [100.0, 120.0]],
+                                        "postagem": {"titulo": "T", "hashtags": []}})
+    txt = entrega.postagem(c).read_text(encoding="utf-8")
+    assert "https://www.youtube.com/watch?v=abc&t=12082s" in txt
 
 
 def test_capa_1080x1920(corte_sintetico):

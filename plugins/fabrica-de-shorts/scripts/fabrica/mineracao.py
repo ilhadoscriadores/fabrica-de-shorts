@@ -43,6 +43,9 @@ def minerar(pasta=".", dias: int = 90, limite: int = 40, max_dur: int = 180, max
     termos = canal.get("termos_busca") or ([canal["nicho"] + " podcast corte"] if canal.get("nicho") else [])
     if not termos:
         raise util.ErroUsuario("o canal.json não tem termos_busca nem nicho: rode /fabrica-de-shorts:comecar")
+    marca = pasta / ".fabrica" / "missao_inicio.txt"  # o novo-corte usa como início do cronômetro da missão
+    marca.parent.mkdir(parents=True, exist_ok=True)
+    marca.write_text(dt.datetime.now().isoformat(timespec="seconds"), encoding="utf-8", newline="\n")
     idioma = canal["idioma"]
     meus = {util.normalizar(x) for x in (canal.get("nome", ""), canal.get("arroba", "")) if util.normalizar(x)}
     ignorar = {util.normalizar(x) for x in canal.get("ignorar_canais", [])} | meus
@@ -123,13 +126,24 @@ def minerar(pasta=".", dias: int = 90, limite: int = 40, max_dur: int = 180, max
     return saida
 
 
+def _linha_txt(l) -> str:
+    return (f"{int(l['views']):>11,} | {l['duracao']:>3}s | {l['dias'] or '?':>4}d | {'novo' if l['recente'] == 'sim' else '    '}"
+            f" | {'FEITO' if l['feito'] else '     '} | {l['canal'][:22]:22} | {l['titulo'][:60]} | {l['url']}")
+
+
+def _resumo(linhas, mostrar: int = 15, max_recentes: int = 8) -> str:
+    """Os N mais vistos e, depois, até 8 recentes que ficaram de fora (senão eles somem no fim da lista)."""
+    topo = [_linha_txt(l) for l in linhas[:mostrar]]
+    recentes = [_linha_txt(l) for l in linhas[mostrar:] if l["recente"] == "sim"][:max_recentes]
+    if recentes:
+        topo += ["", "Recentes (novo):", *recentes]
+    return "\n".join(topo)
+
+
 def _cmd(args):
     saida = minerar(".", dias=args.dias, limite=args.limite)
     linhas = list(csv.DictReader(open(saida, encoding="utf-8-sig")))
-    topo = [f"{int(l['views']):>11,} | {l['duracao']:>3}s | {l['dias'] or '?':>4}d | {'novo' if l['recente'] == 'sim' else '    '}"
-            f" | {'FEITO' if l['feito'] else '     '} | {l['canal'][:22]:22} | {l['titulo'][:60]} | {l['url']}"
-            for l in linhas[: args.mostrar]]
-    print("\n".join(topo))
+    print(_resumo(linhas, args.mostrar))
     return {"ok": bool(linhas), "planilha": str(saida), "total": len(linhas),
             "erros_de_busca": getattr(minerar, "erros", [])[:5]}
 
