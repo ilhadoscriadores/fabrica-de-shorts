@@ -72,3 +72,9 @@ def test_render_curto(corte_sintetico, plugin_dir):
     from fabrica import audio
     I, TP = audio.medir(final)
     assert I == pytest.approx(-14, abs=1.0) and TP <= -1.0
+
+
+def test_resumo_da_revisao_conta_todos_os_erros():
+    rv = {"aprovado": False, "erros": [f"erro {i}" for i in range(12)], "avisos": [], "relatorio": "revisao.md"}
+    r = montagem._resumo_revisao(rv)
+    assert len(r["erros"]) == 8 and r["erros_total"] == 12 and r["aprovado"] is False

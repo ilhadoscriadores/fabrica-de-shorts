@@ -287,10 +287,15 @@ def render(pasta_corte, revisar: bool = True) -> dict:
     if revisar:
         from . import revisao
         rv = revisao.revisar(final, pasta)
-        r["revisao"] = {"aprovado": rv["aprovado"], "erros": rv["erros"][:8], "avisos": rv["avisos"][:6],
-                        "relatorio": rv["relatorio"]}
+        r["revisao"] = _resumo_revisao(rv)
         r["reprovado"] = not rv["aprovado"]
     return r
+
+
+def _resumo_revisao(rv: dict) -> dict:
+    """O JSON mostra só os 8 primeiros erros; erros_total diz quantos são (o resto está no revisao.md)."""
+    return {"aprovado": rv["aprovado"], "erros": rv["erros"][:8], "erros_total": len(rv["erros"]),
+            "avisos": rv["avisos"][:6], "relatorio": rv["relatorio"]}
 
 
 def registrar(sub):

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import statistics
 from pathlib import Path
 
 import numpy as np
@@ -49,8 +50,12 @@ def _transcrever_final(video):
         tmp.with_suffix(".txt").unlink(missing_ok=True)
 
 
-def segunda_conferencia(blocos, palavras_final, limite=0.25):
-    """Compara o começo de cada bloco com a mesma palavra na transcrição do vídeo pronto (com música por baixo)."""
+def segunda_conferencia(blocos, palavras_final, limite=0.25, fracao=0.30, max_avisos=5):
+    """Compara o começo de cada bloco com a mesma palavra na transcrição do vídeo pronto (com música por baixo).
+
+    O Whisper "base" com música erra blocos soltos, então só reprova deslocamento de verdade: a mediana
+    assinada passa do limite ou mais de 30% dos blocos que casaram passam dele. Casos isolados viram aviso.
+    Devolve (erros, avisos)."""
     ref, idx_bloco = [], {}
     for bi, b in enumerate(blocos):
         for k, p in enumerate(b["palavras"]):
@@ -59,18 +64,30 @@ def segunda_conferencia(blocos, palavras_final, limite=0.25):
             ref.append(util.normalizar(p["w"]))
     hip = [util.normalizar(w["w"]) for w in palavras_final]
     sm = difflib.SequenceMatcher(None, ref, hip, autojunk=False)
-    probs = []
+    casados = []  # (texto, tempo da legenda, legenda - voz)
     for blk in sm.get_matching_blocks():
         for k in range(blk.size - 1):  # só confia quando a palavra e a seguinte batem juntas
             i = blk.a + k
             if i in idx_bloco:
                 b = blocos[idx_bloco[i]]
-                t_leg, t_voz = b["f0"] / FPS, palavras_final[blk.b + k]["s"]
-                if abs(t_leg - t_voz) > limite and not b["palavras"][0].get("censura"):
-                    texto = " ".join(p["w"] for p in b["palavras"])
-                    probs.append(f"legenda \"{texto}\" em {t_leg:.2f}s está {abs(t_leg - t_voz) * 1000:.0f} ms "
-                                 f"{'antes' if t_leg < t_voz else 'depois'} da voz no vídeo pronto (2ª conferência)")
-    return probs
+                if b["palavras"][0].get("censura"):
+                    continue
+                t_leg = b["f0"] / FPS
+                casados.append((" ".join(p["w"] for p in b["palavras"]), t_leg, t_leg - palavras_final[blk.b + k]["s"]))
+    if not casados:
+        return [], []
+    lado = lambda d: "depois" if d > 0 else "antes"  # noqa: E731
+    mediana = statistics.median(d for _, _, d in casados)
+    fora = [c for c in casados if abs(c[2]) > limite]
+    if abs(mediana) > limite:
+        return [f"legenda inteira deslocada {abs(mediana) * 1000:.0f} ms {lado(mediana)} da voz no vídeo pronto "
+                f"(2ª conferência, mediana de {len(casados)} blocos)"], []
+    if len(fora) > fracao * len(casados):
+        ex = ", ".join(f"\"{t}\" em {s:.2f}s ({abs(d) * 1000:.0f} ms {lado(d)})" for t, s, d in fora[:3])
+        return [f"{len(fora)} de {len(casados)} blocos a mais de {limite * 1000:.0f} ms da voz no vídeo pronto "
+                f"(2ª conferência; ex.: {ex})"], []
+    return [], [f"legenda \"{t}\" em {s:.2f}s está {abs(d) * 1000:.0f} ms {lado(d)} da voz no vídeo pronto "
+                f"(2ª conferência, pode ser alarme falso do Whisper)" for t, s, d in fora[:max_avisos]]
 
 
 def revisar(video, pasta_corte=None, transcrever_de_novo: bool = True) -> dict:
@@ -130,10 +147,11 @@ def revisar(video, pasta_corte=None, transcrever_de_novo: bool = True) -> dict:
         if not probs:
             ok.append(f"legenda na voz: {len(blocos)} blocos a menos de 80 ms da voz limpa")
         if transcrever_de_novo:
-            seg = segunda_conferencia(blocos, _transcrever_final(video))
-            erros += seg[:8]
-            if not seg:
-                ok.append("2ª conferência (Whisper no vídeo pronto): nenhuma legenda a mais de 250 ms")
+            seg_erros, seg_avisos = segunda_conferencia(blocos, _transcrever_final(video))
+            erros += seg_erros
+            avisos += seg_avisos
+            if not seg_erros:
+                ok.append("2ª conferência (Whisper no vídeo pronto): legenda no lugar, sem deslocamento")
         top = (dados.get("legenda") or {}).get("top", 1180)
         if rostos:
             cobre = montagem.legenda_em_cima_do_rosto(blocos, top, rostos)
