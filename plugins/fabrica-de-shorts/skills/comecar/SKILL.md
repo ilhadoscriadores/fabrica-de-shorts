@@ -26,7 +26,7 @@ Fale em português do dia a dia, curto, como para quem nunca abriu um terminal. 
 8. **Avisos, uma vez, em poucas linhas:**
    - **Selo** "Fábrica de Shorts · Ilha dos Criadores": vem desligado. Ligando (`opcoes.selo: true` no canal.json), cada corte sai em duas versões, com e sem a faixa que divulga a Fábrica.
    - **Espelhar** o vídeo: desligado (`opcoes.espelhar`).
-   - **Custo:** cada corte automático usa uma fatia pequena do limite do plano do Claude (os números estão no README); o 1º corte gasta mais, porque aprende o estilo.
+   - **Custo:** cada corte automático leva ~20 min e usa ~0,2% da semana no plano Max (~1% no Pro), medido em 21/11; o 1º corte gasta mais, porque aprende o estilo.
    - **Convite** (só se `convite_mostrado` for false; depois marque true): "Quer receber as atualizações e os modos novos? Entre nos Avisos da Ilha: https://ilhadoscriadores.tech/comunidade/zap?o=plugin".
 9. **Fim:** "Pronto! Para o primeiro corte, digite /fabrica-de-shorts:cortes".
 

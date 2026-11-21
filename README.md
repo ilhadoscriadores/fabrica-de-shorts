@@ -47,7 +47,15 @@ Abra o [Claude Code](https://claude.com/claude-code) numa **pasta nova e vazia**
 
 A Fábrica é grátis. O custo é o **limite de uso do seu plano do Claude**, que você já paga.
 
-[CUSTO]
+**Medido em 21/11/2026** (Windows, Ryzen 5 4600G + GTX 1060, Claude Opus 5.5 no plano Max de R$ 550/mês):
+
+| | Tempo | Limite do plano | Em reais (Max) |
+|---|---|---|---|
+| Primeira vez (`comecar`) | ~7 min | ~0,07% da semana | ~R$ 0,09 |
+| **Cada corte automático** | **~21 min** | **~0,2% da semana** (~1,6% da janela de 5 h) | **~R$ 0,27** |
+
+- No Max isso dá uns 470 cortes por semana. No **Pro** (limite ~5 vezes menor), a estimativa é ~1% da semana por corte, uns 12 cortes por janela de 5 h; o preço por corte fica parecido.
+- Como medimos: soma dos tokens do registro de cada corte (US$ 3,11 a preço de API), convertida pela página de Uso (1% da semana do Max ≈ US$ 15). É uma conta aproximada; o relatório completo está em [`docs/TESTE-DE-ACEITACAO.md`](docs/TESTE-DE-ACEITACAO.md).
 
 - O primeiro corte gasta mais, porque ele aprende o seu estilo.
 - Cada corte roda num contexto novo: é por isso que fica barato. Para vários cortes seguidos, peça "faz 3 cortes" e ele abre um ajudante novo para cada um.
