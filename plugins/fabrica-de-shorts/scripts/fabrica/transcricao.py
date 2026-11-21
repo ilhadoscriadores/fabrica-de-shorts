@@ -33,24 +33,36 @@ def transcrever(video, saida_json, modelo: str = "auto", idioma: str | None = No
     saida_json = Path(saida_json)
     util.gravar_json(saida_json, palavras, indent=None)
     txt = saida_json.with_name("transcricao.txt") if saida_json.name == "palavras.json" else saida_json.with_suffix(".txt")
-    txt.write_text("\n".join(f"[{t:.1f}] {x}" for t, x in linhas(palavras)) + "\n", encoding="utf-8", newline="\n")
+    txt.write_text("\n".join(linhas_txt(palavras)) + "\n", encoding="utf-8", newline="\n")
     return palavras
 
 
-def linhas(palavras: list[dict], pausa: float = 0.6, maximo: int = 14) -> list[tuple[float, str]]:
-    """Agrupa as palavras em frases curtas (pontuação, pausa ou 14 palavras) para ler rápido."""
+def frases(palavras: list[dict], pausa: float = 0.6, maximo: int = 14) -> list[tuple[float, float, str]]:
+    """Agrupa as palavras em frases curtas (pontuação, pausa ou 14 palavras): (início, fim, texto)."""
     out, atual = [], []
+
+    def fecha():
+        out.append((atual[0]["s"], atual[-1]["e"], " ".join(x["w"] for x in atual)))
+        atual.clear()
     for i, w in enumerate(palavras):
         if atual and (w["s"] - palavras[i - 1]["e"] > pausa or len(atual) >= maximo):
-            out.append((atual[0]["s"], " ".join(x["w"] for x in atual)))
-            atual = []
+            fecha()
         atual.append(w)
         if re.search(r"[.?!…]$", w["w"]):
-            out.append((atual[0]["s"], " ".join(x["w"] for x in atual)))
-            atual = []
+            fecha()
     if atual:
-        out.append((atual[0]["s"], " ".join(x["w"] for x in atual)))
+        fecha()
     return out
+
+
+def linhas(palavras: list[dict], pausa: float = 0.6, maximo: int = 14) -> list[tuple[float, str]]:
+    """Frases como (início, texto)."""
+    return [(s, x) for s, _, x in frases(palavras, pausa, maximo)]
+
+
+def linhas_txt(palavras: list[dict]) -> list[str]:
+    """'[início–fim] texto' para ler rápido e cortar no fim certo da frase (transcricao.txt e timeline.txt)."""
+    return [f"[{s:.1f}–{e:.1f}] {x}" for s, e, x in frases(palavras)]
 
 
 def _cmd(args):

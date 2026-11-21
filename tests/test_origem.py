@@ -37,6 +37,14 @@ def test_txt_com_tempo(tmp_path):
     assert p.read_text(encoding="utf-8").splitlines()[1] == "00:00:03 quando ouvi o tiro"
 
 
+def test_ler_linhas_aceita_inicio_e_fim(tmp_path):
+    p = tmp_path / "transcricao.txt"
+    p.write_text("[12.3–15.8] eu tava na mata\n[16.0-17.25] quando ouvi\n[18.5] o tiro\n00:00:20 e corri\n",
+                 encoding="utf-8")
+    assert origem.ler_linhas(p) == [(12.3, "eu tava na mata"), (16.0, "quando ouvi"), (18.5, "o tiro"),
+                                    (20.0, "e corri")]
+
+
 def test_segundos_aceita_formatos():
     assert origem.segundos("3:20:36") == 12036
     assert origem.segundos("20:36") == 1236

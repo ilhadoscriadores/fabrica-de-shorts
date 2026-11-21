@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import pytest
 
@@ -60,7 +62,7 @@ def test_trecho_sem_palavras_da_erro():
 
 def test_linhas_do_timeline():
     ws = [W("Oi,", 0, 0.3), W("tudo", 0.4, 0.6), W("bem?", 0.7, 1.0), W("Eu", 2.0, 2.2), W("sim.", 2.3, 2.6)]
-    assert base.linhas_texto(ws) == ["[0.0] Oi, tudo bem?", "[2.0] Eu sim."]
+    assert base.linhas_texto(ws) == ["[0.0–1.0] Oi, tudo bem?", "[2.0–2.6] Eu sim."]
 
 
 def test_fim_do_pedaco_nao_invade_a_palavra_seguinte():
@@ -150,7 +152,7 @@ def test_base_gera_tudo_com_av_igual(corte):
     assert abs(info["duracao_video"] - tl["duracao"]) <= 1 / 30 + 0.001
     voz = util.ler_audio(c / "voz.wav")
     assert len(voz) / 48000 == pytest.approx(tl["duracao"], abs=0.002)
-    assert (c / "timeline.txt").read_text(encoding="utf-8").startswith("[0.")
+    assert re.match(r"^\[0\.\d–\d+\.\d\] ", (c / "timeline.txt").read_text(encoding="utf-8"))
     assert r["duracao"] == tl["duracao"]
 
 

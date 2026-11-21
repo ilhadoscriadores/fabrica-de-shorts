@@ -31,4 +31,11 @@ def test_transcrever_manda_audio_decodificado_pelo_ffmpeg(tmp_path, monkeypatch)
     ws = transcricao.transcrever(v, tmp_path / "palavras.json", idioma="pt")
     assert isinstance(visto["audio"], np.ndarray) and len(visto["audio"]) == 32000
     assert ws == [{"w": "oi", "s": 0.1, "e": 0.4}, {"w": "gente.", "s": 0.5, "e": 0.9}]
-    assert (tmp_path / "transcricao.txt").read_text(encoding="utf-8").startswith("[0.1] oi gente.")
+    assert (tmp_path / "transcricao.txt").read_text(encoding="utf-8") == "[0.1–0.9] oi gente.\n"
+
+
+def test_linhas_txt_tem_inicio_e_fim_da_frase():
+    ws = [{"w": "Oi,", "s": 0.0, "e": 0.3}, {"w": "tudo", "s": 0.4, "e": 0.6}, {"w": "bem?", "s": 0.7, "e": 1.04},
+          {"w": "Eu", "s": 2.0, "e": 2.2}, {"w": "sim", "s": 2.3, "e": 2.66}]
+    assert transcricao.linhas_txt(ws) == ["[0.0–1.0] Oi, tudo bem?", "[2.0–2.7] Eu sim"]
+    assert transcricao.linhas(ws) == [(0.0, "Oi, tudo bem?"), (2.0, "Eu sim")]  # o achar ainda usa só o início

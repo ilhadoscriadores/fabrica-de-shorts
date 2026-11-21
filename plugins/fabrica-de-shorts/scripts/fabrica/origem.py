@@ -133,15 +133,18 @@ def gravar_txt(linhas, caminho):
 
 
 def ler_linhas(caminho) -> list[tuple[float, str]]:
-    """Lê .vtt ou .txt ('hh:mm:ss texto')."""
+    """Lê .vtt ou .txt ('hh:mm:ss texto', '[t] texto' ou '[início–fim] texto')."""
     texto = Path(caminho).read_text(encoding="utf-8", errors="replace")
     if Path(caminho).suffix.lower() == ".vtt" or texto.startswith("WEBVTT"):
         return vtt_para_linhas(texto)
     out = []
     for l in texto.splitlines():
         m = re.match(r"^\[?(\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?)\]?\s+(.*)$", l.strip())
+        faixa = re.match(r"^\[(\d+(?:\.\d+)?)\s*[–-]\s*\d+(?:\.\d+)?\]\s*(.*)$", l.strip())
         if m:
             out.append((float(segundos(m.group(1))), m.group(2)))
+        elif faixa:
+            out.append((float(faixa.group(1)), faixa.group(2)))
         elif re.match(r"^\[?\d+(\.\d+)?\]?\s", l.strip()):
             n, resto = l.strip().split(None, 1)
             out.append((float(n.strip("[]")), resto))

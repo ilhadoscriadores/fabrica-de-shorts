@@ -183,7 +183,7 @@ def remap(keep, t: float) -> float:
 
 
 def linhas_texto(ws: list[dict]) -> list[str]:
-    return [f"[{t:.1f}] {x}" for t, x in transcricao.linhas(ws)]
+    return transcricao.linhas_txt(ws)
 
 
 def _filtro(keep, censuras_final, espelhar: bool) -> str:

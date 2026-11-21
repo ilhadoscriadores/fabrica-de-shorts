@@ -13,7 +13,7 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
   "censurar": [{"t": 255.7, "palavra": "neguinho"}]
 }
 ```
-- **trechos:** em ordem; pode juntar 2 a 4 pedaços do mesmo episódio. O primeiro já começa forte (o gancho); o último termina na virada ou na frase de efeito. Total de 60 a 90 s depois de tirar as pausas.
+- **trechos:** em ordem; pode juntar 2 a 4 pedaços do mesmo episódio. O primeiro já começa forte (o gancho); o último termina na virada ou na frase de efeito. Total de 60 a 90 s depois de tirar as pausas. Cada linha do `transcricao.txt` é `[início–fim] frase`: o trecho começa no início de uma frase e termina no fim de outra.
 - **pausa_max:** pausas maiores que isso são encurtadas (0.35 é o padrão).
 - **correcoes:** `t` é o segundo aproximado (±1,5 s) e `de` é a palavra errada como o Whisper escreveu (pode ter várias palavras). `para` vazio apaga a palavra; com espaço, vira várias.
 - **censurar:** palavrões comuns já são cortados sozinhos (`opcoes.censurar_palavroes`). Aqui vão os extras.
