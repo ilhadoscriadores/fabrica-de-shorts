@@ -251,6 +251,7 @@ def render(pasta_corte, revisar: bool = True) -> dict:
     dados = montar_dados(pasta)
     avisos = dados.pop("_avisos")
     marca_top = dados.pop("_marca_top")
+    util.gravar_json(pasta / "avisos_render.json", avisos)
     env = _env_tmp(trab)
     n = proxima_versao(pasta)
     tmp = trab / ".fabrica" / "tmp"
