@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 
 from . import util
@@ -164,6 +165,25 @@ def _validar_edicao(ed: dict, pasta_corte: Path) -> list[str]:
     g = ed.get("gancho")
     if g and not g.get("texto"):
         erros.append("gancho sem texto")
+    if "selo" in ed:
+        erros += _validar_selo(ed["selo"], dur)
+    return erros
+
+
+def _validar_selo(selo, dur) -> list[str]:
+    if not isinstance(selo, dict):
+        return ["selo: use {\"inicio\": segundo_no_corte, \"lado\": \"esq\" ou \"dir\"}"]
+    erros = []
+    ini = selo.get("inicio")
+    if not isinstance(ini, (int, float)) or isinstance(ini, bool):
+        erros.append("selo: \"inicio\" tem que ser o segundo do corte em que o selo entra (número)")
+    elif ini < 0 or (dur is not None and ini >= dur):
+        erros.append(f"selo: o inicio ({ini} s) fica fora do corte (o corte tem {dur} s)")
+    if selo.get("lado", "esq") not in ("esq", "dir"):
+        erros.append("selo: \"lado\" tem que ser \"esq\" ou \"dir\"")
+    cor = selo.get("cor")
+    if cor is not None and not (isinstance(cor, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", cor)):
+        erros.append(f"selo: \"cor\" tem que ser no formato #rrggbb (ex.: #ff3b3b), veio {cor!r}")
     return erros
 
 

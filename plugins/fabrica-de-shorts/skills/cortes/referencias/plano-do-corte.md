@@ -44,7 +44,7 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 - **etiquetas:** só para explicar (gíria, número, sigla). Poucas. `top` opcional (padrão 300, acima da cabeça).
 - **efeitos:** `arquivo` relativo a `biblioteca/efeitos`. Impacto na virada, suspense antes da revelação, comédia no engraçado. Nunca em cima de palavra importante. Troque os do corte anterior.
 - **trilha:** relativo a `biblioteca/trilhas`, no clima do corte. A Fábrica faz o loop, deixa baixinha e abaixa quando a pessoa fala. Sem trilha na biblioteca, o corte sai sem.
-- **selo:** só vale com `opcoes.selo: true` no canal.json; entra num trecho calmo, nunca no fim (`lado`: esq ou dir).
+- **selo:** só vale com `opcoes.selo: true` no canal.json; entra num trecho calmo, nunca no fim (`inicio` em segundos do corte; `lado`: esq ou dir; `cor` opcional, `#rrggbb`).
 
 ## 3. Postagem
 ```json

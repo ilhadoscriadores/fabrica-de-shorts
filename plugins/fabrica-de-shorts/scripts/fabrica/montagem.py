@@ -290,26 +290,29 @@ def render(pasta_corte, revisar: bool = True) -> dict:
                 "-movflags", "+faststart", str(final)])
     r = {"ok": True, "final": str(final), "versao": n, "duracao": round(dados["duracaoFrames"] / FPS, 2),
          "lufs": I, "pico_master_dbtp": TP, "render_s": round(t_render), "avisos": avisos}  # master antes do AAC
-    if canal["opcoes"].get("selo"):
-        sel = (config.carregar_corte(pasta, "render").get("edicao") or {}).get("selo")             or {"inicio": min(20.0, r["duracao"] / 3), "lado": "esq"}
-        mov_selo = _selo(trab, editor, env, sel.get("lado", "esq"), sel.get("cor", dados["cor"]))
-        y = max(0, int(sel.get("top", marca_top - 35)))
-        fc = (f"[1:v]scale=out_color_matrix=bt709:out_range=tv,format=yuva420p,setpts=PTS-STARTPTS+{float(sel['inicio']):.3f}/TB[s];"
-              f"[0:v][s]overlay=0:{y}:eof_action=pass,format=yuv420p[v]")
-        com = pasta / f"final_v{n}_selo.mp4"
-        util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(final), "-i", str(mov_selo), "-filter_complex", fc,
-                    "-map", "[v]", "-map", "0:a", *enc, *COR, "-c:a", "copy", "-movflags", "+faststart", str(enc_tmp)])
-        util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(enc_tmp), "-map", "0", "-c", "copy", "-bsf:v", BSF,
-                    "-movflags", "+faststart", str(com)])
-        r["final_selo"] = str(com)
-    for p in (mov, mix, master, enc_tmp):
-        p.unlink(missing_ok=True)
+    try:
+        if revisar:  # antes do selo: se o selo falhar, o final_vN.mp4 já está revisado
+            from . import revisao
+            rv = revisao.revisar(final, pasta)
+            r["revisao"] = _resumo_revisao(rv)
+            r["reprovado"] = not rv["aprovado"]
+        if canal["opcoes"].get("selo"):
+            sel = (config.carregar_corte(pasta, "render").get("edicao") or {}).get("selo") \
+                or {"inicio": min(20.0, r["duracao"] / 3), "lado": "esq"}
+            mov_selo = _selo(trab, editor, env, sel.get("lado", "esq"), sel.get("cor", dados["cor"]))
+            y = max(0, int(sel.get("top", marca_top - 35)))
+            fc = (f"[1:v]scale=out_color_matrix=bt709:out_range=tv,format=yuva420p,setpts=PTS-STARTPTS+{float(sel['inicio']):.3f}/TB[s];"
+                  f"[0:v][s]overlay=0:{y}:eof_action=pass,format=yuv420p[v]")
+            com = pasta / f"final_v{n}_selo.mp4"
+            util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(final), "-i", str(mov_selo), "-filter_complex", fc,
+                        "-map", "[v]", "-map", "0:a", *enc, *COR, "-c:a", "copy", "-movflags", "+faststart", str(enc_tmp)])
+            util.rodar([util.ffmpeg(), "-v", "error", "-y", "-i", str(enc_tmp), "-map", "0", "-c", "copy", "-bsf:v", BSF,
+                        "-movflags", "+faststart", str(com)])
+            r["final_selo"] = str(com)
+    finally:
+        for p in (mov, mix, master, enc_tmp):
+            p.unlink(missing_ok=True)
     r["total_s"] = round(time.time() - t0)
-    if revisar:
-        from . import revisao
-        rv = revisao.revisar(final, pasta)
-        r["revisao"] = _resumo_revisao(rv)
-        r["reprovado"] = not rv["aprovado"]
     return r
 
 

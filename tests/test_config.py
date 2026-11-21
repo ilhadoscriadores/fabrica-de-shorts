@@ -70,6 +70,22 @@ def test_tempos_de_edicao_alem_da_duracao_avisam(area):
     assert any("etiqueta" in e and "6.0" in e for e in erros)
 
 
+def test_selo_conferido(area):
+    _, corte = area
+    util.gravar_json(corte / "timeline.json", {"duracao": 6.0, "palavras": []})
+
+    def erros(selo):
+        return config.validar_corte({"trechos": [[1, 8]], "edicao": {"selo": selo}}, corte, etapa="render")
+    assert erros({"inicio": 2.0, "lado": "dir", "cor": "#ff3b3b"}) == []
+    assert erros({"inicio": 0}) == []
+    assert any("selo" in e and "inicio" in e for e in erros({"lado": "esq"}))
+    assert any("selo" in e and "6.0" in e for e in erros({"inicio": 7.5}))
+    assert any("selo" in e and "inicio" in e for e in erros({"inicio": "20"}))
+    assert any("selo" in e and "esq" in e for e in erros({"inicio": 2, "lado": "direita"}))
+    assert any("selo" in e and "#rrggbb" in e for e in erros({"inicio": 2, "cor": "vermelho"}))
+    assert any("selo" in e for e in erros("sim"))
+
+
 def test_carregar_corte_aplica_padroes_e_levanta(area):
     _, corte = area
     util.gravar_json(corte / "corte.json", {"trechos": [[1, 8]]})

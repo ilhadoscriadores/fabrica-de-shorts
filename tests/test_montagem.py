@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 import pytest
 
@@ -87,6 +88,36 @@ def test_render_apaga_a_pasta_do_corte_no_public_mesmo_com_erro(corte_sintetico,
     assert (c / "base.mp4").exists()  # o link no public sai; a base do corte fica
 
 
+def _ligar_selo(pasta):
+    canal = util.ler_json(pasta / "canal.json")
+    canal.setdefault("opcoes", {})["selo"] = True
+    util.gravar_json(pasta / "canal.json", canal)
+
+
+def test_render_revisa_o_final_antes_do_selo(corte_sintetico, monkeypatch):
+    """Falha no selo não pode deixar o final_vN.mp4 sem revisão (nem os temporários grandes no disco)."""
+    pasta, c = corte_sintetico
+    (pasta / "editor" / "node_modules").mkdir(exist_ok=True)
+    _ligar_selo(pasta)
+
+    def remotion_falso(editor, comp, saida, extra, env):
+        if comp == "Selo":
+            raise util.ErroComando("remotion falhou no selo")
+        dur = util.ler_json(c / "dados.json")["duracaoFrames"] / 30
+        util.rodar([util.ffmpeg(), "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c=gray:s=1080x1920:r=30:d={dur}",
+                    "-f", "lavfi", "-i", f"sine=d={dur}:sample_rate=48000", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-c:a", "pcm_s16le", str(saida)])
+    monkeypatch.setattr(montagem, "_npx_render", remotion_falso)
+    from fabrica import revisao
+    revisados = []
+    monkeypatch.setattr(revisao, "revisar", lambda video, pasta_corte: revisados.append(Path(video).name) or
+                        {"aprovado": True, "erros": [], "avisos": [], "relatorio": str(c / "revisao.md")})
+    with pytest.raises(util.ErroComando):
+        montagem.render(c)
+    assert revisados == ["final_v1.mp4"] and (c / "final_v1.mp4").exists()
+    assert not list((pasta / ".fabrica" / "tmp").glob(f"{c.name}_v1*"))
+
+
 def test_sem_trilha_quando_biblioteca_vazia(corte_sintetico):
     _, c = corte_sintetico
     d = montagem.montar_dados(c)
@@ -124,6 +155,24 @@ def test_render_curto(corte_sintetico, plugin_dir):
     I, TP = audio.medir(final)
     assert I == pytest.approx(-14, abs=1.0) and TP <= -1.0
     assert "pico_dbtp" not in r and r["pico_master_dbtp"] <= -1.0  # pico do master (antes do AAC)
+    assert not (pasta / "editor" / "public" / c.name).exists()
+
+
+@pytest.mark.lento
+def test_render_com_selo(corte_sintetico, plugin_dir):
+    pasta, c = corte_sintetico
+    from conftest import _junction
+    _junction(plugin_dir / "editor" / "node_modules", pasta / "editor" / "node_modules")
+    _ligar_selo(pasta)
+    util.gravar_json(c / "corte.json", {"trechos": [[0.9, 5.9]], "edicao": {
+        "gancho": {"texto": "TESTE", "ate": 1.5}, "selo": {"inicio": 1.0, "lado": "dir", "cor": "#ff3b3b"}}})
+    r = montagem.render(c, revisar=False)
+    final, com = c / "final_v1.mp4", c / "final_v1_selo.mp4"
+    assert final.exists() and com.exists() and r["final_selo"] == str(com)
+    a, b = util.sondar(final), util.sondar(com)
+    assert (a["largura"], a["altura"]) == (b["largura"], b["altura"]) == (1080, 1920)
+    assert b["duracao"] == pytest.approx(a["duracao"], abs=0.05)
+    assert b["duracao_video"] == pytest.approx(a["duracao_video"], abs=1 / 30 + 0.01)
 
 
 def test_resumo_da_revisao_conta_todos_os_erros():
