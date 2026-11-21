@@ -35,12 +35,29 @@ def test_encoder_fica_em_cache(monkeypatch, tmp_path):
 def test_relatorio_lista_comando_winget_do_que_falta(monkeypatch, tmp_path):
     real = ambiente.shutil.which
     monkeypatch.setattr(ambiente.shutil, "which", lambda n: None if n in ("node", "npm") else real(n))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))  # nem nas pastas do winget
+    monkeypatch.setenv("ProgramFiles", str(tmp_path))
     rel = ambiente.relatorio(tmp_path)
     nomes = {f["nome"]: f for f in rel["faltando"]}
     assert "Node.js" in nomes
     assert "winget install" in nomes["Node.js"]["windows"] and "OpenJS.NodeJS.LTS" in nomes["Node.js"]["windows"]
+    for item in ambiente.INSTALAR.values():  # sem pergunta de licença nem de fonte (msstore) no meio
+        assert "--source winget --accept-package-agreements --accept-source-agreements" in item["windows"]
     assert "brew install node" in nomes["Node.js"]["mac"]
     assert rel["ffmpeg"]["ok"] is True
+
+
+def test_relatorio_acha_node_e_ffmpeg_instalados_agora(monkeypatch, tmp_path):
+    """O winget acabou de instalar: o PATH da sessão não tem, mas a pasta do winget e a do Node têm."""
+    real = ambiente.util.achar
+    monkeypatch.setattr(ambiente.util, "achar", lambda n: f"C:/novo/{n}.exe" if n in ("ffmpeg", "node", "npm") else real(n))
+    monkeypatch.delenv("FABRICA_FFMPEG", raising=False)
+    monkeypatch.setattr(ambiente, "_versao", lambda args: {"node": "v22.11.0", "npm": "10.9.0"}.get(
+        str(args[0]).rsplit("/", 1)[-1].removesuffix(".exe"), "ffmpeg version 8.0"))
+    monkeypatch.setattr(ambiente, "_gpu", lambda: None)
+    rel = ambiente.relatorio(tmp_path)
+    assert rel["ffmpeg"]["caminho"] == "C:/novo/ffmpeg.exe" and rel["node"]["ok"] is True
+    assert not any(f["nome"] in ("FFmpeg", "Node.js") for f in rel["faltando"])
 
 
 def test_node_antigo_conta_como_faltando(monkeypatch, tmp_path):

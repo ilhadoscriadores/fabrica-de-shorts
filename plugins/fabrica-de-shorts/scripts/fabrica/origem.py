@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import html
 import re
-import shutil
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -73,8 +72,9 @@ def opcoes_ydl(idioma: str = "pt", **extra) -> dict:
     o = {"quiet": True, "no_warnings": True, "noprogress": True,
          "http_headers": {"Accept-Language": f"{lang},{idioma};q=0.9"},
          "extractor_args": {"youtube": {"lang": [idioma], "player_client": list(CLIENTES)}}}
-    if shutil.which("node"):
-        o["js_runtimes"] = {"node": {}}
+    node = util.achar("node")
+    if node:
+        o["js_runtimes"] = {"node": {"path": node}}
     try:
         o["ffmpeg_location"] = str(Path(util.ffmpeg()).parent)
     except util.ErroUsuario:

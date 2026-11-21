@@ -15,15 +15,16 @@ from . import util
 NVENC = ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "19", "-b:v", "0"]
 X264 = ["-c:v", "libx264", "-preset", "medium", "-crf", "18"]
 
+WINGET = "--source winget --accept-package-agreements --accept-source-agreements"
 INSTALAR = {
-    "Python": {"windows": "winget install -e --id Python.Python.3.12", "mac": "brew install python"},
-    "FFmpeg": {"windows": "winget install -e --id Gyan.FFmpeg", "mac": "brew install ffmpeg"},
-    "Node.js": {"windows": "winget install -e --id OpenJS.NodeJS.LTS", "mac": "brew install node"},
+    "Python": {"windows": f"winget install -e --id Python.Python.3.12 {WINGET}", "mac": "brew install python"},
+    "FFmpeg": {"windows": f"winget install -e --id Gyan.FFmpeg {WINGET}", "mac": "brew install ffmpeg"},
+    "Node.js": {"windows": f"winget install -e --id OpenJS.NodeJS.LTS {WINGET}", "mac": "brew install node"},
 }
 
 
 def achar_ffmpeg() -> str | None:
-    return os.environ.get("FABRICA_FFMPEG") or shutil.which("ffmpeg")
+    return os.environ.get("FABRICA_FFMPEG") or util.achar("ffmpeg")
 
 
 def erro_nvenc(ffmpeg: str) -> str | None:
@@ -111,7 +112,8 @@ def _versao(args) -> str | None:
 
 
 def _versao_node() -> str | None:
-    return _versao(["node", "--version"]) if shutil.which("node") else None
+    node = util.achar("node")
+    return _versao([node, "--version"]) if node else None
 
 
 def _gpu() -> str | None:
@@ -132,7 +134,8 @@ def relatorio(pasta=".") -> dict:
     if node:
         m = re.match(r"v?(\d+)", node)
         node_ok = bool(m and int(m.group(1)) >= 20)
-    npm = _versao(["npm", "--version"]) if shutil.which("npm") else None
+    npm_exe = util.achar("npm")
+    npm = _versao([npm_exe, "--version"]) if npm_exe else None
     if not node_ok or not npm:
         faltando.append({"nome": "Node.js", **INSTALAR["Node.js"]})
     py_ok = sys.version_info >= (3, 10)

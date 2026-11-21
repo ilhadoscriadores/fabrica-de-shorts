@@ -1,6 +1,7 @@
 """Peças comuns: rodar programas sem shell, ler/gravar JSON, ler áudio e o envelope da voz."""
 from __future__ import annotations
 
+import glob
 import json
 import os
 import re
@@ -31,13 +32,44 @@ def _utf8():
             pass
 
 
+def achar(nome: str) -> str | None:
+    """Caminho do programa. No Windows, se o PATH não acha, procura onde o winget e o Node instalam:
+    o PATH desta sessão é de antes da instalação e só atualiza abrindo o Claude Code de novo."""
+    p = shutil.which(nome)
+    if p or os.name != "nt" or os.sep in nome or "/" in nome:
+        return p
+    exts = [""] if Path(nome).suffix else [".exe", ".cmd", ".bat"]
+    local, pf = os.environ.get("LOCALAPPDATA"), os.environ.get("ProgramFiles")
+    pastas = ([Path(local) / "Microsoft" / "WinGet" / "Links"] if local else []) + ([Path(pf) / "nodejs"] if pf else [])
+    for d in pastas:
+        for ext in exts:
+            if (d / (nome + ext)).is_file():
+                return str(d / (nome + ext))
+    if local and nome.lower() in ("ffmpeg", "ffprobe"):
+        achados = glob.glob(os.path.join(local, "Microsoft", "WinGet", "Packages", "Gyan.FFmpeg*", "**", "bin", nome + ".exe"),
+                            recursive=True)
+        if achados:
+            return sorted(achados)[-1]
+    return None
+
+
 def _resolver(exe: str) -> str:
     """No Windows, npm/npx/codex são .cmd e só rodam pelo caminho completo."""
     if os.name == "nt" and not exe.lower().endswith((".exe", ".com")):
-        achado = shutil.which(exe)
+        achado = achar(exe)
         if achado:
             return achado
     return exe
+
+
+def _env_com_pasta(exe: str, env):
+    """Programa achado fora do PATH: a pasta dele entra no PATH do filho (o npm install chama `node`)."""
+    pasta = os.path.dirname(exe)
+    base = os.environ if env is None else env
+    caminhos = base.get("PATH", "")
+    if os.name != "nt" or not pasta or os.path.normcase(pasta) in {os.path.normcase(c.rstrip("\\/")) for c in caminhos.split(os.pathsep)}:
+        return env
+    return {**base, "PATH": pasta + os.pathsep + caminhos}
 
 
 def rodar(args, cwd=None, env=None, capturar=True, timeout=None) -> subprocess.CompletedProcess:
@@ -45,6 +77,8 @@ def rodar(args, cwd=None, env=None, capturar=True, timeout=None) -> subprocess.C
     args = [str(a) for a in args]
     exe = args[0]
     args[0] = _resolver(exe)
+    if args[0] != exe:
+        env = _env_com_pasta(args[0], env)
     try:
         r = subprocess.run(args, cwd=cwd, env=env, capture_output=capturar, timeout=timeout,
                            text=True, encoding="utf-8", errors="replace")
@@ -93,8 +127,8 @@ def gravar_json(p, obj, indent=1):
 
 
 def ffmpeg() -> str:
-    """O ffmpeg a usar: FABRICA_FFMPEG, senão o do PATH."""
-    f = os.environ.get("FABRICA_FFMPEG") or shutil.which("ffmpeg")
+    """O ffmpeg a usar: FABRICA_FFMPEG, senão o do PATH (ou o que o winget instalou)."""
+    f = os.environ.get("FABRICA_FFMPEG") or achar("ffmpeg")
     if not f:
         raise ErroUsuario("o ffmpeg não está instalado. Rode /fabrica-de-shorts:comecar para instalar.")
     return f
@@ -105,7 +139,7 @@ def ffprobe() -> str:
     irmao = f.with_name("ffprobe" + f.suffix)
     if irmao.exists():
         return str(irmao)
-    p = shutil.which("ffprobe")
+    p = achar("ffprobe")
     if not p:
         raise ErroUsuario("o ffprobe (vem junto com o ffmpeg) não foi encontrado.")
     return p

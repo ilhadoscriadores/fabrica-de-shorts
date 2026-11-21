@@ -24,8 +24,9 @@ def _codex() -> list[str] | None:
         return None
     if os.name == "nt" and c.lower().endswith(".cmd"):
         js = Path(c).parent / "node_modules" / "@openai" / "codex" / "bin" / "codex.js"
-        if js.exists() and shutil.which("node"):
-            return [shutil.which("node"), str(js)]
+        node = util.achar("node")
+        if js.exists() and node:
+            return [node, str(js)]
     return [c]
 
 
