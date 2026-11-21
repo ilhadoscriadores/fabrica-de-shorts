@@ -13,10 +13,12 @@ def transcrever(video, saida_json, modelo: str = "auto", idioma: str | None = No
     if dispositivo == "cuda":
         ambiente.carregar_dlls_cuda()
     from faster_whisper import WhisperModel
+    # o áudio vai decodificado pelo ffmpeg: o leitor do faster-whisper (PyAV) quebra com versões novas do PyAV
+    som = util.ler_audio(video, sr=16000)
 
     def rodar(dev, ct, mod):
         m = WhisperModel(mod, device=dev, compute_type=ct)
-        segs, _ = m.transcribe(str(video), language=idioma, word_timestamps=True, vad_filter=True,
+        segs, _ = m.transcribe(som, language=idioma, word_timestamps=True, vad_filter=True,
                                condition_on_previous_text=False, initial_prompt=prompt)
         return [{"w": w.word.strip(), "s": round(w.start, 3), "e": round(w.end, 3)}
                 for s in segs for w in (s.words or []) if w.word.strip()]
