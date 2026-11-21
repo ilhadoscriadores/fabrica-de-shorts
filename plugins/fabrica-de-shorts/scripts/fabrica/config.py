@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 from pathlib import Path
 
 from . import util
@@ -72,6 +74,16 @@ def _normalizar_corte(c: dict) -> dict:
         corr = lista
     c["correcoes"] = corr
     return c
+
+
+CAMPOS_DA_BASE = ("bruto", "trechos", "pausa_max", "correcoes", "censurar", "espelhar")
+
+
+def hash_plano(corte: dict) -> str:
+    """Impressão digital do que o `base` usa: mudou, a base.mp4 e a timeline ficaram velhas."""
+    c = _normalizar_corte(corte)
+    plano = {k: c.get(k) for k in CAMPOS_DA_BASE} | {"bruto": c.get("bruto", "bruto.mp4")}
+    return hashlib.sha1(json.dumps(plano, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
 def validar_corte(corte: dict, pasta_corte, etapa: str = "base") -> list[str]:

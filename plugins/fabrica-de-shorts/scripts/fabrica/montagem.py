@@ -120,7 +120,10 @@ def montar_dados(pasta_corte) -> dict:
     corte = config.carregar_corte(pasta, etapa="render")
     ed = corte.get("edicao") or {}
     tl = util.ler_json(pasta / "timeline.json")
-    rostos = util.ler_json(pasta / "rostos.json", {}) if (pasta / "rostos.json").exists() else {}
+    if tl.get("hash_plano") and tl["hash_plano"] != config.hash_plano(corte):  # timeline de antes do hash: sem conferir
+        raise util.ErroUsuario(f"o plano do corte mudou (trechos/correções/censuras): rode FAB base {pasta.relative_to(trab).as_posix()} "
+                               "de novo antes do render")
+    rostos =util.ler_json(pasta / "rostos.json", {}) if (pasta / "rostos.json").exists() else {}
     cid = pasta.name
     pub = trab / "editor" / "public" / cid
     avisos = []

@@ -270,7 +270,8 @@ def base(pasta_corte, rosto: bool = True) -> dict:
     tl_ws = palavras_no_corte(ws, keep)
     util.gravar_json(pasta / "timeline.json", {"duracao": total, "keep": keep, "censuras": cens_final,
                                                "largura": info["largura"], "altura": info["altura"],
-                                               "espelhado": espelhar, "palavras": tl_ws})
+                                               "espelhado": espelhar, "hash_plano": config.hash_plano(corte),
+                                               "palavras": tl_ws})
     (pasta / "timeline.txt").write_text("\n".join(linhas_texto(tl_ws)) + "\n", encoding="utf-8", newline="\n")
     r = {"ok": True, "duracao": total, "pedacos": len(keep), "censuras": len(cens_final),
          "palavras": len(tl_ws), "timeline": str(pasta / "timeline.txt"), "espelhado": espelhar}

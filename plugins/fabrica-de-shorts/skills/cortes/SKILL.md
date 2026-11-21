@@ -36,4 +36,4 @@ argument-hint: "[link de um corte viral] [quantos cortes]"
 13. **Mensagem final, curta:** caminho do vídeo, título, origem (corte modelado + views + episódio + minutos), tempo total e o que a revisão achou. No 1º corte, 1 linha lembrando do selo (opção de divulgar a Fábrica).
 
 ## Feedback do usuário
-"Assisti, achei X": corrija (corte.json ou canal.json), rode `FAB render CORTE` (sai uma versão nova) e escreva a regra no fim do GUIA-DE-EDICAO.md (`- (dd/mm) ...`), para valer nos próximos cortes.
+"Assisti, achei X": corrija (corte.json ou canal.json) e rode `FAB render CORTE` (sai uma versão nova). Mudou trecho, correção ou censura → `FAB base CORTE` e depois `FAB render CORTE` (sem o base, o render recusa). Escreva a regra no fim do GUIA-DE-EDICAO.md (`- (dd/mm) ...`), para valer nos próximos cortes.

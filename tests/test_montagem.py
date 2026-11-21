@@ -36,6 +36,20 @@ def test_dados_expande_whoosh_e_bip(corte_sintetico):
     assert (c / "dados.json").exists() and (c / "legendas.json").exists()
 
 
+@pytest.mark.parametrize("mudanca", [{"trechos": [[0.9, 4.4]]}, {"correcoes": [{"t": 1.0, "de": "olha", "para": "Olha"}]},
+                                     {"censurar": [{"t": 2.3, "palavra": "a"}]}, {"pausa_max": 0.5}, {"espelhar": True}])
+def test_plano_mudou_pede_base_de_novo(corte_sintetico, mudanca):
+    _, c = corte_sintetico
+    assert util.ler_json(c / "timeline.json")["hash_plano"]
+    corte = util.ler_json(c / "corte.json")
+    util.gravar_json(c / "corte.json", {**corte, "edicao": {"gancho": {"texto": "SÓ A EDIÇÃO MUDOU"}}})
+    montagem.montar_dados(c)  # edição não muda a base
+    util.gravar_json(c / "corte.json", {**corte, **mudanca})
+    with pytest.raises(util.ErroUsuario) as e:
+        montagem.montar_dados(c)
+    assert "FAB base" in str(e.value) and "de novo antes do render" in str(e.value)
+
+
 def test_sem_trilha_quando_biblioteca_vazia(corte_sintetico):
     _, c = corte_sintetico
     d = montagem.montar_dados(c)

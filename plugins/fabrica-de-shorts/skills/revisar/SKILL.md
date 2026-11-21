@@ -10,4 +10,4 @@ argument-hint: "[caminho do vídeo ou da pasta do corte]"
 
 1. Vídeo de um corte da fábrica (`cortes/NNN-nome/final_vN.mp4`): `FAB revisar <vídeo> --corte <pasta do corte>`. Qualquer outro vídeo: `FAB revisar <vídeo>` (confere só som e imagem).
 2. Leia o `revisao.md` gerado e explique em poucas linhas: o que reprovou (com o segundo do vídeo), os avisos e o que passou.
-3. Se o vídeo é da fábrica e o usuário quiser corrigir: ajuste o `corte.json` e rode `FAB render <pasta do corte>` (gera uma versão nova; nunca sobrescreve).
+3. Se o vídeo é da fábrica e o usuário quiser corrigir: ajuste o `corte.json` e rode `FAB render <pasta do corte>` (mudou trecho, correção ou censura? `FAB base <pasta do corte>` antes) (gera uma versão nova; nunca sobrescreve).
