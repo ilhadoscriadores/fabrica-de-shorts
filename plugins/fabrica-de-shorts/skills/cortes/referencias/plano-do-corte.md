@@ -56,3 +56,9 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
 }
 ```
 Título curto com 1 palavra quente. O `FAB postagem` junta o crédito do podcast, o link do episódio com o minuto, o aviso de imagem por IA, o crédito da música quando a licença pede, a duração e a origem.
+
+## 4. Quando a revisão reprova
+- **"sem voz nos 300 ms"**: a palavra caiu em silêncio (o Whisper inventou ou esticou). Apague com uma correção `"para": ""` ou divida o trecho para tirar o silêncio.
+- **"X ms ANTES/DEPOIS da voz"**: corrija a palavra. Se sobrar 1 ou 2 blocos depois de 1 correção, entregue: o relatório registra.
+- **"legenda/etiqueta em cima do rosto"**: mude o `top` da etiqueta ou o trecho.
+- Avisos da 2ª conferência não reprovam.
