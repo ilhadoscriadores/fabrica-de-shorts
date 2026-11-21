@@ -55,7 +55,7 @@ Um arquivo por corte, em `cortes/NNN-nome/corte.json`. Escreva em duas etapas: o
   "hashtags": ["#bope", "#policia", "#podcast", "#cortes"]
 }
 ```
-Título curto com 1 palavra quente. O `FAB postagem` junta o crédito do podcast, o link do episódio com o minuto, o aviso de imagem por IA, o crédito da música quando a licença pede, a duração e a origem.
+Título curto com 1 palavra quente. O `FAB postagem` junta o crédito do podcast, o link do vídeo original com o minuto, o aviso de imagem por IA, o crédito da música quando a licença pede, a duração e a origem.
 
 ## 4. Quando a revisão reprova
 - **"sem voz nos 300 ms"**: a palavra caiu em silêncio (o Whisper inventou ou esticou). Apague com uma correção `"para": ""` ou divida o trecho para tirar o silêncio.

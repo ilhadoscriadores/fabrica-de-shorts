@@ -57,7 +57,10 @@ def test_postagem_tem_credito_e_origem(tmp_path):
                      "hashtags": ["#bope", "#podcast"]}})
     txt = entrega.postagem(c).read_text(encoding="utf-8")
     assert "Gritou a senha do BOPE" in txt and "#bope #podcast" in txt
-    assert "https://www.youtube.com/watch?v=ng-Q6ZD0XmI&t=12032s" in txt
+    assert ("Vídeo original: SARGENTO HONÓRIO - Fala Glauber #183 · "
+            "https://www.youtube.com/watch?v=ng-Q6ZD0XmI&t=12032s") in txt
+    assert "Episódio" not in txt  # o vídeo baixado pode ser um vídeo curto do canal do podcast
+    assert txt.count("SARGENTO HONÓRIO") == 2  # 1 na descrição, 1 na origem
     assert "Fala Glauber Podcast" in txt
     assert "geradas por IA" in txt
     assert "Heroic Age" in txt
@@ -73,6 +76,16 @@ def test_postagem_link_no_comeco_do_primeiro_trecho(tmp_path):
                                         "postagem": {"titulo": "T", "hashtags": []}})
     txt = entrega.postagem(c).read_text(encoding="utf-8")
     assert "https://www.youtube.com/watch?v=abc&t=12082s" in txt
+
+
+def test_postagem_usa_o_tempo_do_tempo_fim(tmp_path):
+    c = entrega.novo_corte(tmp_path, "x")
+    with open(c / "tempos.csv", "a", encoding="utf-8") as f:
+        f.write("render,2026-11-21T10:00:00,300.0,ok\nmissao,2026-11-21T10:30:00,754,fim\n")
+    util.gravar_json(c / "corte.json", {"postagem": {"titulo": "T", "hashtags": []}})
+    txt = entrega.postagem(c).read_text(encoding="utf-8")
+    assert "TEMPO DE PRODUÇÃO: 12min34 (máquina 5min00)" in txt
+    assert entrega.tempo(c, "ver")["total_s"] == 754
 
 
 def test_capa_1080x1920(corte_sintetico):

@@ -54,6 +54,9 @@ def tempo(pasta_corte, acao: str = "ver") -> dict:
         linhas = _linhas_tempo(pasta)
     ini = dt.datetime.fromisoformat(next(l["inicio"] for l in linhas if l["etapa"] == "missao" and l["status"] == "inicio"))
     total = (dt.datetime.now() - ini).total_seconds()
+    fins = [l for l in linhas if l["etapa"] == "missao" and l["status"] == "fim"]
+    if acao == "ver" and fins:  # missão encerrada: vale o total do `tempo fim`
+        total = float(fins[-1]["segundos"])
     if acao == "fim":
         with open(pasta / "tempos.csv", "a", encoding="utf-8", newline="\n") as f:
             f.write(f"missao,{AGORA()},{total:.0f},fim\n")
@@ -155,11 +158,13 @@ def postagem(pasta_corte) -> Path:
     if link and origem.get("inicio_real") is not None:  # o minuto onde o corte começa, não o começo do bruto
         primeiro = (corte.get("trechos") or [[0, 0]])[0][0]
         link += ("&" if "?" in link else "?") + f"t={int(origem['inicio_real'] + primeiro)}s"
+    # o vídeo baixado nem sempre é o episódio inteiro (pode ser um vídeo curto do canal do podcast)
+    original = f"Vídeo original: {origem['titulo']} · {link}" if origem.get("titulo") else f"Vídeo original: {link}"
     desc = [p.get("descricao", "").strip()]
-    if origem.get("titulo"):
-        desc.append(f"Corte do {origem.get('canal') or 'podcast'}: {origem['titulo']}")
+    if origem.get("titulo") or origem.get("canal"):
+        desc.append(f"Corte do {origem.get('canal') or 'podcast'}")
     if link:
-        desc.append(f"Episódio completo: {link}")
+        desc.append(original)
     if ed.get("imagens"):
         desc.append("Imagens ilustrativas geradas por IA.")
     cred = _credito_trilha(trab, (ed.get("trilha") or {}).get("arquivo"))
@@ -182,7 +187,7 @@ def postagem(pasta_corte) -> Path:
         txt.append(f"- Corte viral modelado: {modelo['url']}")
         txt.append(f"  \"{modelo.get('titulo', '')}\" · {modelo.get('canal', '')} · {_milhar(modelo.get('views', 0))} views")
     if link:
-        txt.append(f"- Episódio original: {origem.get('titulo', '')} · {link}")
+        txt.append(f"- {original}")
     if trechos:
         txt.append(f"  Trechos: {', '.join(trechos)} (pausas encurtadas)")
     if t:
