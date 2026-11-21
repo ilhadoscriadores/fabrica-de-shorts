@@ -28,7 +28,7 @@ O `claude -p --output-format json` não deu para usar: o login do Claude de term
 
 \* A conversão usa a relação medida na página de Uso: 1% da semana do Max ≈ US$ 15. Em reais, R$ 550 ÷ 4,33 semanas ≈ R$ 127 por semana.
 - **Na página de Uso:** a semana andou 23% → 26% na 1ª rodada e 26% → 27% na 2ª. A janela de 5 h andou 16% → 39% e 42% → 44%.
-- **Os números da página de Uso estão inflados:** foram medidos com outras sessões rodando ao mesmo tempo, a do canal de GTA com 4 montadores. Por isso o número principal é o dos tokens de cada missão.
+- **Os números da página de Uso estão inflados:** foram medidos com outras sessões do Claude rodando ao mesmo tempo. Por isso o número principal é o dos tokens de cada missão.
 - **Referência:** o corte 002 do BO 24 Horas (vídeo BPP 7) custou US$ 4,96, ≈0,33% da semana. A meta do desenho era 0,10–0,13%: a 2ª rodada ficou em ~0,21%, 37% mais barata que a referência, mas ainda acima da meta.
 
 **Estimativa para o Pro** (limite ~5 vezes menor que o Max 5x):
@@ -62,7 +62,27 @@ O `claude -p --output-format json` não deu para usar: o login do Claude de term
 | A skill não dizia o que fazer quando a revisão reprova | Seção "Quando a revisão reprova" no `plano-do-corte.md` |
 | A skill `comecar` não perguntava o nome nem explicava o NVENC desligado | Pergunta o nome; mostra o motivo e manda atualizar o driver |
 
-Os defeitos menores da 2ª rodada estão na seção seguinte; entram antes da publicação.
+## Defeitos da 2ª rodada (corrigidos antes da publicação)
+- O `achar` mandava usar um parâmetro que não existe quando o episódio não tinha legenda.
+- O `achar` não usava o link do vídeo completo que vem na descrição do Short.
+- A postagem rotulava errado o vídeo original (agora: "Vídeo original: título · link").
+- O `transcricao.txt` não mostrava onde cada frase termina (agora `[início–fim] frase`).
+- Palavrinhas ("na", "e", "o") sumiam da legenda quando o Whisper as esticava por cima de um silêncio.
+- A skill não avisava que mudar o plano muda os tempos da edição.
+- O relatório da revisão se contradizia: aprovava com avisos e dizia "sem deslocamento".
+
+## Revisão final (antes de publicar)
+- O detector de rosto quebrava com acento no caminho (ex.: `C:\Users\João`): o modelo agora é lido pelo buffer.
+- FFmpeg, Node e npm instalados pelo winget só eram achados reabrindo o Claude Code: a Fábrica procura nas pastas do winget e do Node, e o winget roda sem perguntas.
+- O feedback que mudava trecho, correção ou censura gerava uma versão igual: o render recusa e pede o `base` antes.
+- O `editor/public/` crescia a cada corte (o Remotion copia tudo a cada render): a pasta do corte sai depois do render.
+- Pedido de permissão a cada comando: as skills liberam só o Python do `.venv`.
+- A imagem do README mostrava o QR code de doação do podcast: borrado, e as legendas ANTES e DEPOIS ficaram embaixo de cada imagem.
+- O exemplo do `corte.json` usava uma pessoa real e uma palavra ofensiva: trocado por dados fictícios.
+- Dependências sem teto de versão: teto na próxima versão maior (menos o yt-dlp).
+- O selo não era conferido nem testado de ponta a ponta: o `corte.json` é conferido, a revisão roda antes do selo e há um teste do render com selo.
+- Nomes reais nos testes: trocados por fictícios.
+- Python 3.15 recém-lançado pode não ter os pacotes prontos: a skill instala o 3.12 e o `ambiente` avisa.
 
 ## Ficam para a v1.1
 - **Anúncio do vídeo original** (selo de patrocinador no canto, em plano aberto): a revisão ainda não detecta, e o `corte.json` não tem como recortar ou borrar uma área.
