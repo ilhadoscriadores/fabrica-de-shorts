@@ -106,3 +106,9 @@ def test_conferir_acusa_adiantada(tmp_path):
     wav = _voz(tmp_path)
     probs = legendas.conferir(legendas.blocos(_palavras_adiantadas(-0.15)), wav)
     assert len(probs) == 3 and all("ANTES" in p["problema"] for p in probs)
+
+
+def test_legenda_cabe_longe_dos_botoes():
+    ws = _seguidas("quem manda mamãe")  # 16 letras largas num bloco só
+    for b in legendas.blocos(ws):
+        assert legendas._largura(b["palavras"], b["tam"]) <= 880

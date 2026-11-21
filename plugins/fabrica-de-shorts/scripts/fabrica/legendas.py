@@ -98,7 +98,7 @@ def _fechar(bs, fps=FPS, duracao=None):
     return bs
 
 
-def blocos(palavras, fps: int = FPS, largura_max: int = 960, destaques=(), duracao=None) -> list[dict]:
+def blocos(palavras, fps: int = FPS, largura_max: int = 880, destaques=(), duracao=None) -> list[dict]:
     dest = {util.normalizar(d) for d in destaques}
     bs = []
     for o in _oracoes([w for w in palavras if limpa(w["w"])]):

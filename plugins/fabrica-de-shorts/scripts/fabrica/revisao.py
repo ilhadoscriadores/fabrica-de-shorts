@@ -61,7 +61,7 @@ def segunda_conferencia(blocos, palavras_final, limite=0.25):
     sm = difflib.SequenceMatcher(None, ref, hip, autojunk=False)
     probs = []
     for blk in sm.get_matching_blocks():
-        for k in range(blk.size):
+        for k in range(blk.size - 1):  # só confia quando a palavra e a seguinte batem juntas
             i = blk.a + k
             if i in idx_bloco:
                 b = blocos[idx_bloco[i]]

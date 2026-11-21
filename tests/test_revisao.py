@@ -73,3 +73,21 @@ def test_palavrao_que_vaza_reprova(corte_sintetico):
     util.gravar_json(c / "timeline.json", tl)
     r = revisao.revisar(c / "base.mp4", c, transcrever_de_novo=False)
     assert any("palavrão" in e for e in r["erros"]), r["erros"]
+
+
+def _bloco(texto, f0):
+    return {"f0": f0, "f1": f0 + 20, "tam": 92,
+            "palavras": [{"w": w, "f0": f0, "f1": f0 + 5, "destaque": False, "censura": False} for w in texto.split()]}
+
+
+def test_segunda_conferencia_ignora_palavra_solta():
+    blocos = [_bloco("EU ACENHEI", 335)]
+    hip = [{"w": "eu", "s": 11.42, "e": 11.5}, {"w": "a", "s": 11.6, "e": 11.7}, {"w": "senha", "s": 11.8, "e": 12.1}]
+    assert revisao.segunda_conferencia(blocos, hip) == []
+
+
+def test_segunda_conferencia_acusa_quando_duas_palavras_batem():
+    blocos = [_bloco("GRITEI ASSIM", 300)]
+    hip = [{"w": "gritei", "s": 10.4, "e": 10.6}, {"w": "assim", "s": 10.7, "e": 10.9}]
+    probs = revisao.segunda_conferencia(blocos, hip)
+    assert len(probs) == 1 and "400 ms" in probs[0]
