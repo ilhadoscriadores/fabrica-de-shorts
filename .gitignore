@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.superpowers/
+.venv-install.log
+node_modules/
+plugins/fabrica-de-shorts/editor/out/
+plugins/fabrica-de-shorts/editor/public/*/
+!plugins/fabrica-de-shorts/editor/public/fontes/
+!plugins/fabrica-de-shorts/editor/public/exemplo/
+tests/_tmp/
+plugins/fabrica-de-shorts/editor/public/exemplo/*
+!plugins/fabrica-de-shorts/editor/public/exemplo/dados.json

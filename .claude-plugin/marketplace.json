@@ -1,0 +1,25 @@
+{
+  "name": "ilha-dos-criadores",
+  "owner": {
+    "name": "Ilha dos Criadores",
+    "url": "https://ilhadoscriadores.tech"
+  },
+  "metadata": {
+    "description": "Skills da Ilha dos Criadores para o Claude Code: automação de vídeo para criadores.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "fabrica-de-shorts",
+      "source": "./plugins/fabrica-de-shorts",
+      "description": "Fábrica de Shorts: minera cortes virais de podcast, acha a origem, baixa só o trecho, edita em 9:16 com legenda sincronizada, efeitos e trilha, revisa sozinho e entrega com capa e texto de postagem.",
+      "version": "1.0.0",
+      "author": { "name": "Ilha dos Criadores · Bora Pra Prática", "url": "https://ilhadoscriadores.tech" },
+      "homepage": "https://github.com/ilhadoscriadores/fabrica-de-shorts",
+      "repository": "https://github.com/ilhadoscriadores/fabrica-de-shorts",
+      "license": "PolyForm-Shield-1.0.0",
+      "keywords": ["shorts", "cortes", "podcast", "tiktok", "reels", "remotion", "video", "automacao"],
+      "category": "productivity"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+# Só para quem tem placa NVIDIA: deixa a transcrição (Whisper) rodar na placa.
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*

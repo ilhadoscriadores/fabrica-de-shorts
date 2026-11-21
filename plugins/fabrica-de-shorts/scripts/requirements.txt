@@ -1,0 +1,6 @@
+# Fábrica de Shorts: o que o Python precisa (instalado num ambiente .venv só da pasta de trabalho)
+yt-dlp[default]>=2026.10.26
+faster-whisper>=1.2.0
+opencv-python-headless>=4.10
+numpy>=1.26
+Pillow>=10.0
