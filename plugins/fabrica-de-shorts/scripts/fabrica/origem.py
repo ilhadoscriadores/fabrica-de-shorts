@@ -340,8 +340,24 @@ def baixar(url: str, inicio, fim, pasta_corte, margem: float = 4) -> dict:
     opts = opcoes_ydl("pt", format="bv*[height<=1080][vcodec^=avc1]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/b",
                       merge_output_format="mp4", download_ranges=faixa,
                       outtmpl={"default": str(pasta / "bruto.%(ext)s")})
-    with _ydl(opts) as y:
-        info = y.extract_info(url, download=True)
+    antes = set(pasta.glob("bruto*"))
+
+    def limpar_restos():
+        for p in set(pasta.glob("bruto*")) - antes | {p for p in antes if p.suffix in (".part", ".ytdl")}:
+            p.unlink(missing_ok=True)
+
+    for tentativa in (1, 2):  # o ffmpeg do yt-dlp às vezes sai com erro no meio do trecho
+        try:
+            with _ydl(opts) as y:
+                info = y.extract_info(url, download=True)
+            break
+        except Exception as e:
+            limpar_restos()
+            if tentativa == 2:
+                linhas = [x for x in re.sub(r"\x1b\[[0-9;]*m", "", str(e)).replace("ERROR:", "").splitlines() if x.strip()]
+                motivo = (linhas[-1].strip() if linhas else type(e).__name__)[:160]
+                raise util.ErroComando(f"não consegui baixar o trecho (2 tentativas): {motivo}. "
+                                       "Espere 1 minuto e rode o baixar de novo.") from None
     if not bruto.exists():
         achados = sorted(pasta.glob("bruto*.mp4"), key=lambda p: p.stat().st_mtime)
         if not achados:

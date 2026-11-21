@@ -233,3 +233,49 @@ def test_achar_episodio_sem_legenda_tem_erro(monkeypatch, tmp_path):
 def test_vtt_decodifica_entidades_html():
     vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\neu&nbsp;tava &amp; voc&ecirc; disse &quot;oi&quot; &gt;&gt; d&#39;\n"
     assert origem.vtt_para_linhas(vtt) == [(1.0, "eu tava & você disse \"oi\" >> d'")]
+
+
+# ---------- baixar: ffmpeg do yt-dlp falha às vezes ----------
+def _ydl_que_falha(tmp_path, falhas):
+    chamadas = []
+
+    class FalsoYDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=True):
+            chamadas.append(url)
+            if len(chamadas) <= falhas:
+                (tmp_path / "bruto.f137.mp4.part").write_bytes(b"resto")
+                (tmp_path / "bruto.mp4").write_bytes(b"pela metade")
+                raise Exception("ERROR: ffmpeg exited with code 3199971767")
+            assert not list(tmp_path.glob("bruto*")), "sobrou resto da tentativa anterior"
+            (tmp_path / "bruto.mp4").write_bytes(b"x")
+            return {"title": "Episódio", "channel": "Podcast", "duration": 1000}
+    return FalsoYDL, chamadas
+
+
+def test_baixar_tenta_de_novo_quando_o_ffmpeg_falha(monkeypatch, tmp_path):
+    ydl, chamadas = _ydl_que_falha(tmp_path, falhas=1)
+    monkeypatch.setattr(origem, "_YDL", ydl)
+    monkeypatch.setattr(origem.util, "sondar", lambda p: {"duracao": 30.0})
+    r = origem.baixar("https://youtu.be/abc", 10, 20, tmp_path)
+    assert r["ok"] and len(chamadas) == 2
+    assert sorted(p.name for p in tmp_path.glob("bruto*")) == ["bruto.mp4"]
+
+
+def test_baixar_falha_duas_vezes_da_erro_curto(monkeypatch, tmp_path):
+    ydl, chamadas = _ydl_que_falha(tmp_path, falhas=2)
+    monkeypatch.setattr(origem, "_YDL", ydl)
+    with pytest.raises(util.ErroComando) as e:
+        origem.baixar("https://youtu.be/abc", 10, 20, tmp_path)
+    assert len(chamadas) == 2
+    msg = str(e.value)
+    assert msg.startswith("não consegui baixar o trecho") and "Traceback" not in msg and len(msg) < 300
+    assert not list(tmp_path.glob("bruto*"))  # nada pela metade que pareça um bruto pronto
