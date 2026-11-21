@@ -1,0 +1,436 @@
+{
+ "fonte": "Mixkit (mixkit.co)",
+ "licenca_musica": "Mixkit Stock Music Free License: grátis, uso comercial ok em YouTube/TikTok, sem crédito obrigatório; não pode registrar no Content ID nem redistribuir a faixa sozinha. https://mixkit.co/license/#musicFree",
+ "licenca_efeitos": "Mixkit Sound Effects Free License: grátis, uso comercial ok, sem crédito obrigatório; não pode redistribuir o efeito sozinho. https://mixkit.co/license/#sfxFree",
+ "trilhas": [
+  {
+   "clima": "comedia",
+   "titulo": "Allure",
+   "duracao": "1:45",
+   "url": "https://assets.mixkit.co/music/55/55.mp3",
+   "arquivo": "comedia/mixkit-allure.mp3"
+  },
+  {
+   "clima": "comedia",
+   "titulo": "Banjo Man in Africa",
+   "duracao": "1:30",
+   "url": "https://assets.mixkit.co/music/822/822.mp3",
+   "arquivo": "comedia/mixkit-banjo-man-in-africa.mp3"
+  },
+  {
+   "clima": "comedia",
+   "titulo": "Bob",
+   "duracao": "2:02",
+   "url": "https://assets.mixkit.co/music/824/824.mp3",
+   "arquivo": "comedia/mixkit-bob.mp3"
+  },
+  {
+   "clima": "tensao",
+   "titulo": "Echoes",
+   "duracao": "3:46",
+   "url": "https://assets.mixkit.co/music/188/188.mp3",
+   "arquivo": "tensao/mixkit-echoes.mp3"
+  },
+  {
+   "clima": "tensao",
+   "titulo": "Epical Drums 01",
+   "duracao": "1:46",
+   "url": "https://assets.mixkit.co/music/676/676.mp3",
+   "arquivo": "tensao/mixkit-epical-drums-01.mp3"
+  },
+  {
+   "clima": "tensao",
+   "titulo": "Epical Drums 02",
+   "duracao": "2:03",
+   "url": "https://assets.mixkit.co/music/677/677.mp3",
+   "arquivo": "tensao/mixkit-epical-drums-02.mp3"
+  },
+  {
+   "clima": "acao",
+   "titulo": "Daredevil",
+   "duracao": "1:44",
+   "url": "https://assets.mixkit.co/music/80/80.mp3",
+   "arquivo": "acao/mixkit-daredevil.mp3"
+  },
+  {
+   "clima": "acao",
+   "titulo": "Evolution",
+   "duracao": "1:55",
+   "url": "https://assets.mixkit.co/music/1027/1027.mp3",
+   "arquivo": "acao/mixkit-evolution.mp3"
+  },
+  {
+   "clima": "acao",
+   "titulo": "Games Music",
+   "duracao": "1:58",
+   "url": "https://assets.mixkit.co/music/706/706.mp3",
+   "arquivo": "acao/mixkit-games-music.mp3"
+  },
+  {
+   "clima": "policial",
+   "titulo": "A Voice from The Past",
+   "duracao": "3:44",
+   "url": "https://assets.mixkit.co/music/548/548.mp3",
+   "arquivo": "policial/mixkit-a-voice-from-the-past.mp3"
+  },
+  {
+   "clima": "policial",
+   "titulo": "Delirium",
+   "duracao": "4:50",
+   "url": "https://assets.mixkit.co/music/605/605.mp3",
+   "arquivo": "policial/mixkit-delirium.mp3"
+  },
+  {
+   "clima": "policial",
+   "titulo": "Fun Jazz",
+   "duracao": "2:21",
+   "url": "https://assets.mixkit.co/music/647/647.mp3",
+   "arquivo": "policial/mixkit-fun-jazz.mp3"
+  },
+  {
+   "clima": "emocao",
+   "titulo": "Alignment",
+   "duracao": "1:35",
+   "url": "https://assets.mixkit.co/music/310/310.mp3",
+   "arquivo": "emocao/mixkit-alignment.mp3"
+  },
+  {
+   "clima": "emocao",
+   "titulo": "Amu Dabi",
+   "duracao": "2:48",
+   "url": "https://assets.mixkit.co/music/172/172.mp3",
+   "arquivo": "emocao/mixkit-amu-dabi.mp3"
+  },
+  {
+   "clima": "emocao",
+   "titulo": "Classical 7",
+   "duracao": "2:36",
+   "url": "https://assets.mixkit.co/music/714/714.mp3",
+   "arquivo": "emocao/mixkit-classical-7.mp3"
+  },
+  {
+   "clima": "epico",
+   "titulo": "Classical 1",
+   "duracao": "1:51",
+   "url": "https://assets.mixkit.co/music/708/708.mp3",
+   "arquivo": "epico/mixkit-classical-1.mp3"
+  },
+  {
+   "clima": "epico",
+   "titulo": "Dreaming Big",
+   "duracao": "1:50",
+   "url": "https://assets.mixkit.co/music/31/31.mp3",
+   "arquivo": "epico/mixkit-dreaming-big.mp3"
+  },
+  {
+   "clima": "leve",
+   "titulo": "A Blue Day",
+   "duracao": "3:20",
+   "url": "https://assets.mixkit.co/music/150/150.mp3",
+   "arquivo": "leve/mixkit-a-blue-day.mp3"
+  },
+  {
+   "clima": "leve",
+   "titulo": "A New Start",
+   "duracao": "1:34",
+   "url": "https://assets.mixkit.co/music/144/144.mp3",
+   "arquivo": "leve/mixkit-a-new-start.mp3"
+  },
+  {
+   "clima": "misterio",
+   "titulo": "Cyberpunk City 2",
+   "duracao": "1:55",
+   "url": "https://assets.mixkit.co/music/141/141.mp3",
+   "arquivo": "misterio/mixkit-cyberpunk-city-2.mp3"
+  },
+  {
+   "clima": "misterio",
+   "titulo": "Fallen (Asper)",
+   "duracao": "4:55",
+   "url": "https://assets.mixkit.co/music/565/565.mp3",
+   "arquivo": "misterio/mixkit-fallen-asper.mp3"
+  },
+  {
+   "clima": "misterio",
+   "titulo": "Feedback Dreams",
+   "duracao": "2:29",
+   "url": "https://assets.mixkit.co/music/588/588.mp3",
+   "arquivo": "misterio/mixkit-feedback-dreams.mp3"
+  },
+  {
+   "clima": "terror",
+   "titulo": "Dark Shadows",
+   "duracao": "1:46",
+   "url": "https://assets.mixkit.co/music/64/64.mp3",
+   "arquivo": "terror/mixkit-dark-shadows.mp3"
+  },
+  {
+   "clima": "terror",
+   "titulo": "Goats",
+   "duracao": "3:32",
+   "url": "https://assets.mixkit.co/music/564/564.mp3",
+   "arquivo": "terror/mixkit-goats.mp3"
+  },
+  {
+   "clima": "hiphop",
+   "titulo": "Cavron Trap",
+   "duracao": "1:45",
+   "url": "https://assets.mixkit.co/music/294/294.mp3",
+   "arquivo": "hiphop/mixkit-cavron-trap.mp3"
+  },
+  {
+   "clima": "hiphop",
+   "titulo": "Complicated",
+   "duracao": "1:49",
+   "url": "https://assets.mixkit.co/music/281/281.mp3",
+   "arquivo": "hiphop/mixkit-complicated.mp3"
+  }
+ ],
+ "efeitos": [
+  {
+   "categoria": "whoosh",
+   "titulo": "Fast whoosh transition",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1490/1490.wav",
+   "arquivo": "whoosh/mixkit-fast-whoosh-transition.wav"
+  },
+  {
+   "categoria": "whoosh",
+   "titulo": "Cinematic whoosh fast transition",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1492/1492.wav",
+   "arquivo": "whoosh/mixkit-cinematic-whoosh-fast-transition.wav"
+  },
+  {
+   "categoria": "whoosh",
+   "titulo": "Cinematic whoosh stutter",
+   "duracao": "0:03",
+   "url": "https://assets.mixkit.co/active_storage/sfx/787/787.wav",
+   "arquivo": "whoosh/mixkit-cinematic-whoosh-stutter.wav"
+  },
+  {
+   "categoria": "whoosh",
+   "titulo": "Atmospheric wind drum roll swoosh",
+   "duracao": "0:07",
+   "url": "https://assets.mixkit.co/active_storage/sfx/576/576.wav",
+   "arquivo": "whoosh/mixkit-atmospheric-wind-drum-roll-swoosh.wav"
+  },
+  {
+   "categoria": "whoosh",
+   "titulo": "Big fire magic swoosh",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1327/1327.wav",
+   "arquivo": "whoosh/mixkit-big-fire-magic-swoosh.wav"
+  },
+  {
+   "categoria": "whoosh",
+   "titulo": "Horror swish",
+   "duracao": "0:03",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1495/1495.wav",
+   "arquivo": "whoosh/mixkit-horror-swish.wav"
+  },
+  {
+   "categoria": "impacto",
+   "titulo": "Cinematic impact whip echo",
+   "duracao": "0:08",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1510/1510.wav",
+   "arquivo": "impacto/mixkit-cinematic-impact-whip-echo.wav"
+  },
+  {
+   "categoria": "impacto",
+   "titulo": "Big cinematic impact",
+   "duracao": "0:08",
+   "url": "https://assets.mixkit.co/active_storage/sfx/788/788-preview.mp3",
+   "arquivo": "impacto/mixkit-big-cinematic-impact.wav"
+  },
+  {
+   "categoria": "impacto",
+   "titulo": "Cinematic whoosh deep impact",
+   "duracao": "0:04",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1143/1143-preview.mp3",
+   "arquivo": "impacto/mixkit-cinematic-whoosh-deep-impact.wav"
+  },
+  {
+   "categoria": "impacto",
+   "titulo": "Punch with a hard whistle",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2050/2050.wav",
+   "arquivo": "impacto/mixkit-punch-with-a-hard-whistle.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Cinematic trailer riser",
+   "duracao": "0:03",
+   "url": "https://assets.mixkit.co/active_storage/sfx/790/790.wav",
+   "arquivo": "suspense/mixkit-cinematic-trailer-riser.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Metallic sweep suspense",
+   "duracao": "0:04",
+   "url": "https://assets.mixkit.co/active_storage/sfx/670/670.wav",
+   "arquivo": "suspense/mixkit-metallic-sweep-suspense.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Horn suspense transition",
+   "duracao": "0:05",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3112/3112.wav",
+   "arquivo": "suspense/mixkit-horn-suspense-transition.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Deep heartbeat impact",
+   "duracao": "0:03",
+   "url": "https://assets.mixkit.co/active_storage/sfx/498/498.wav",
+   "arquivo": "suspense/mixkit-deep-heartbeat-impact.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Cinematic heartbeat ambience",
+   "duracao": "0:06",
+   "url": "https://assets.mixkit.co/active_storage/sfx/497/497.wav",
+   "arquivo": "suspense/mixkit-cinematic-heartbeat-ambience.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Cartoon surprise gasp",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/967/967.wav",
+   "arquivo": "suspense/mixkit-cartoon-surprise-gasp.wav"
+  },
+  {
+   "categoria": "suspense",
+   "titulo": "Horror tape rewind cinematic transition",
+   "duracao": "0:08",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1090/1090.wav",
+   "arquivo": "suspense/mixkit-horror-tape-rewind-cinematic-transition.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Boing hit sound",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2894/2894.wav",
+   "arquivo": "comedia/mixkit-boing-hit-sound.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Metallic boing hit",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2895/2895.wav",
+   "arquivo": "comedia/mixkit-metallic-boing-hit.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Cartoon baby monkey laugh",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/102/102.wav",
+   "arquivo": "comedia/mixkit-cartoon-baby-monkey-laugh.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Cartoon insect buzz laugh",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/36/36.wav",
+   "arquivo": "comedia/mixkit-cartoon-insect-buzz-laugh.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Slow vinyl record scratch",
+   "duracao": "0:03",
+   "url": "https://assets.mixkit.co/active_storage/sfx/706/706.wav",
+   "arquivo": "comedia/mixkit-slow-vinyl-record-scratch.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Cricket chirp",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1927/1927.wav",
+   "arquivo": "comedia/mixkit-cricket-chirp.wav"
+  },
+  {
+   "categoria": "comedia",
+   "titulo": "Fail Drum and bells",
+   "duracao": "0:04",
+   "url": "https://assets.mixkit.co/active_storage/sfx/571/571.wav",
+   "arquivo": "comedia/mixkit-fail-drum-and-bells.wav"
+  },
+  {
+   "categoria": "pop",
+   "titulo": "Explainer video pops whoosh light pop",
+   "duracao": "0:00",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3005/3005.wav",
+   "arquivo": "pop/mixkit-explainer-video-pops-whoosh-light-pop.wav"
+  },
+  {
+   "categoria": "pop",
+   "titulo": "Bubble pop up alert notification",
+   "duracao": "0:00",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2357/2357.wav",
+   "arquivo": "pop/mixkit-bubble-pop-up-alert-notification.wav"
+  },
+  {
+   "categoria": "pop",
+   "titulo": "Plastic bubble click",
+   "duracao": "0:00",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1124/1124.wav",
+   "arquivo": "pop/mixkit-plastic-bubble-click.wav"
+  },
+  {
+   "categoria": "pop",
+   "titulo": "Toy drums and bell ding",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/560/560.wav",
+   "arquivo": "pop/mixkit-toy-drums-and-bell-ding.wav"
+  },
+  {
+   "categoria": "policial",
+   "titulo": "Gun explosion with long echo",
+   "duracao": "0:07",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1700/1700.wav",
+   "arquivo": "policial/mixkit-gun-explosion-with-long-echo.wav"
+  },
+  {
+   "categoria": "policial",
+   "titulo": "8-bit explosion gun",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2779/2779.wav",
+   "arquivo": "policial/mixkit-8-bit-explosion-gun.wav"
+  },
+  {
+   "categoria": "policial",
+   "titulo": "Sci-Fi radio waves",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/895/895.wav",
+   "arquivo": "policial/mixkit-sci-fi-radio-waves.wav"
+  },
+  {
+   "categoria": "dinheiro",
+   "titulo": "Clinking coins",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1993/1993.wav",
+   "arquivo": "dinheiro/mixkit-clinking-coins.wav"
+  },
+  {
+   "categoria": "transicao",
+   "titulo": "Camera shutter click",
+   "duracao": "0:00",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1133/1133.wav",
+   "arquivo": "transicao/mixkit-camera-shutter-click.wav"
+  },
+  {
+   "categoria": "transicao",
+   "titulo": "Fast tape rewind cinematic transition",
+   "duracao": "0:02",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1092/1092.wav",
+   "arquivo": "transicao/mixkit-fast-tape-rewind-cinematic-transition.wav"
+  },
+  {
+   "categoria": "transicao",
+   "titulo": "Engine glitch noise",
+   "duracao": "0:01",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2954/2954.wav",
+   "arquivo": "transicao/mixkit-engine-glitch-noise.wav"
+  }
+ ]
+}
