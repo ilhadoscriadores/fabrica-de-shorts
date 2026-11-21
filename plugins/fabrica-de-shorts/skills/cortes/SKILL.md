@@ -2,6 +2,11 @@
 name: cortes
 description: Faz um corte de podcast (Short, TikTok, Reels) de ponta a ponta com a Fábrica de Shorts — minera os virais do nicho, acha o episódio original, baixa só o trecho, edita em 9:16, revisa sozinho e entrega com capa e texto de postagem. Use quando pedirem um corte, um Short, "o próximo corte", "missão automática" ou quando mandarem feedback de um corte ("assisti, achei X").
 argument-hint: "[link de um corte viral] [quantos cortes]"
+allowed-tools:
+  - Bash(.venv/Scripts/python.exe:*)
+  - Bash(.venv/bin/python:*)
+  - PowerShell(.venv/Scripts/python.exe:*)
+  - PowerShell(& .venv/Scripts/python.exe:*)
 ---
 
 # Fábrica de Shorts · cortes

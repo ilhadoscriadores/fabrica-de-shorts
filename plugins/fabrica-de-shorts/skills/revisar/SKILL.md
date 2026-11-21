@@ -2,6 +2,11 @@
 name: revisar
 description: Revisão automática de um vídeo da Fábrica de Shorts (ou de qualquer vídeo) — áudio e vídeo do mesmo tamanho, volume −14 LUFS, pico, quadro preto ou congelado e, num corte da fábrica, legenda fora da voz, legenda em cima do rosto, rosto cortado e palavrão com som. Use quando pedirem para revisar, conferir ou checar um vídeo antes de postar.
 argument-hint: "[caminho do vídeo ou da pasta do corte]"
+allowed-tools:
+  - Bash(.venv/Scripts/python.exe:*)
+  - Bash(.venv/bin/python:*)
+  - PowerShell(.venv/Scripts/python.exe:*)
+  - PowerShell(& .venv/Scripts/python.exe:*)
 ---
 
 # Fábrica de Shorts · revisar

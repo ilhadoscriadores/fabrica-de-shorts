@@ -2,6 +2,11 @@
 name: comecar
 description: Prepara o computador e a pasta para a Fábrica de Shorts (confere e instala Python, FFmpeg e Node, cria a pasta de trabalho, pergunta nicho, @ e canais de referência). Use na primeira vez, quando pedirem para instalar/configurar a Fábrica de Shorts, ou depois de atualizar o plugin.
 argument-hint: "[nicho] [@ do canal] [canais que você admira]"
+allowed-tools:
+  - Bash(.venv/Scripts/python.exe:*)
+  - Bash(.venv/bin/python:*)
+  - PowerShell(.venv/Scripts/python.exe:*)
+  - PowerShell(& .venv/Scripts/python.exe:*)
 ---
 
 # Fábrica de Shorts · começar
