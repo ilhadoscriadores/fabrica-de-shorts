@@ -1,0 +1,54 @@
+import subprocess
+
+from fabrica import ambiente, util
+
+
+def _falso_rodar(falhar_com):
+    def rodar(args, **kw):
+        if any(falhar_com in str(a) for a in args):
+            raise util.ErroComando("h264_nvenc falhou: Driver does not support the required nvenc API version")
+        return subprocess.CompletedProcess(args, 0, "", "")
+    return rodar
+
+
+def test_encoder_cai_para_x264_quando_nvenc_falha(monkeypatch, tmp_path):
+    monkeypatch.setattr(ambiente.util, "rodar", _falso_rodar("h264_nvenc"))
+    enc = ambiente.encoder_video("ffmpeg", pasta=tmp_path)
+    assert enc[:2] == ["-c:v", "libx264"]
+    assert "-crf" in enc
+
+
+def test_encoder_usa_nvenc_quando_teste_passa(monkeypatch, tmp_path):
+    monkeypatch.setattr(ambiente.util, "rodar", _falso_rodar("nada-falha"))
+    enc = ambiente.encoder_video("ffmpeg", pasta=tmp_path)
+    assert enc == ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "19", "-b:v", "0"]
+
+
+def test_encoder_fica_em_cache(monkeypatch, tmp_path):
+    monkeypatch.setattr(ambiente.util, "rodar", _falso_rodar("nada-falha"))
+    ambiente.encoder_video("ffmpeg", pasta=tmp_path)
+    monkeypatch.setattr(ambiente.util, "rodar", _falso_rodar("h264_nvenc"))
+    assert ambiente.encoder_video("ffmpeg", pasta=tmp_path)[1] == "h264_nvenc"
+    assert (tmp_path / ".fabrica" / "ambiente.json").exists()
+
+
+def test_relatorio_lista_comando_winget_do_que_falta(monkeypatch, tmp_path):
+    real = ambiente.shutil.which
+    monkeypatch.setattr(ambiente.shutil, "which", lambda n: None if n in ("node", "npm") else real(n))
+    rel = ambiente.relatorio(tmp_path)
+    nomes = {f["nome"]: f for f in rel["faltando"]}
+    assert "Node.js" in nomes
+    assert "winget install" in nomes["Node.js"]["windows"] and "OpenJS.NodeJS.LTS" in nomes["Node.js"]["windows"]
+    assert "brew install node" in nomes["Node.js"]["mac"]
+    assert rel["ffmpeg"]["ok"] is True
+
+
+def test_node_antigo_conta_como_faltando(monkeypatch, tmp_path):
+    monkeypatch.setattr(ambiente, "_versao_node", lambda: "v18.19.0")
+    rel = ambiente.relatorio(tmp_path)
+    assert any(f["nome"] == "Node.js" for f in rel["faltando"])
+
+
+def test_whisper_sem_dlls_cuda_usa_cpu_small(monkeypatch):
+    monkeypatch.setattr(ambiente, "cuda_pronto", lambda: False)
+    assert ambiente.whisper_dispositivo() == ("cpu", "int8", "small")
