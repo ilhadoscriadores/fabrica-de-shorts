@@ -123,6 +123,10 @@ def _gpu() -> str | None:
     return v
 
 
+def _versao_python() -> tuple[int, int]:
+    return sys.version_info[:2]
+
+
 def relatorio(pasta=".") -> dict:
     faltando = []
     ff = achar_ffmpeg()
@@ -138,7 +142,8 @@ def relatorio(pasta=".") -> dict:
     npm = _versao([npm_exe, "--version"]) if npm_exe else None
     if not node_ok or not npm:
         faltando.append({"nome": "Node.js", **INSTALAR["Node.js"]})
-    py_ok = sys.version_info >= (3, 10)
+    py = _versao_python()
+    py_ok = py >= (3, 10)
     if not py_ok:
         faltando.append({"nome": "Python", **INSTALAR["Python"]})
     try:
@@ -172,6 +177,10 @@ def relatorio(pasta=".") -> dict:
         "disco_livre_gb": round(livre, 1) if livre is not None else None,
         "faltando": faltando,
     }
+    if py >= (3, 15):  # Python recém-lançado: faster-whisper e opencv podem não ter pacote pronto
+        cmd, usar = (INSTALAR["Python"]["windows"], "py -3.12") if os.name == "nt" else ("brew install python@3.12", "python3.12")
+        rel["aviso_python"] = (f"o Python {py[0]}.{py[1]} é novo demais e alguns pacotes podem não ter versão pronta para ele; "
+                               f"se der erro no pip, instale o 3.12 ({cmd}) e recrie o .venv com {usar}")
     if motivo:  # placa NVIDIA que não codifica: quase sempre driver antigo
         rel["nvenc_motivo"] = motivo
     return rel

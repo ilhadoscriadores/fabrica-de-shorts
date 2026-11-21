@@ -60,6 +60,14 @@ def test_relatorio_acha_node_e_ffmpeg_instalados_agora(monkeypatch, tmp_path):
     assert not any(f["nome"] in ("FFmpeg", "Node.js") for f in rel["faltando"])
 
 
+def test_python_novo_demais_ganha_aviso(monkeypatch, tmp_path):
+    monkeypatch.setattr(ambiente, "_versao_python", lambda: (3, 15))
+    rel = ambiente.relatorio(tmp_path)
+    assert "3.12" in rel["aviso_python"] and "3.15" in rel["aviso_python"]
+    monkeypatch.setattr(ambiente, "_versao_python", lambda: (3, 14))
+    assert "aviso_python" not in ambiente.relatorio(tmp_path)
+
+
 def test_node_antigo_conta_como_faltando(monkeypatch, tmp_path):
     monkeypatch.setattr(ambiente, "_versao_node", lambda: "v18.19.0")
     rel = ambiente.relatorio(tmp_path)
