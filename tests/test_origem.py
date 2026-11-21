@@ -117,3 +117,119 @@ def test_baixar_nao_baixa_de_novo_se_o_bruto_existe(monkeypatch, tmp_path):
     monkeypatch.setattr(origem.util, "sondar", lambda p: {"duracao": 10.0})
     r = origem.baixar("https://youtu.be/abc", 10, 20, tmp_path)
     assert r["ja_existia"] is True
+
+
+# ---------- legenda vazia (o YouTube às vezes devolve 200 sem corpo) ----------
+VTT_BOM = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\neu tava na mata\n"
+
+
+class _Resposta:
+    def __init__(self, corpo):
+        self.corpo = corpo
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return self.corpo
+
+
+def _ydl_com_legenda(downloads=None):
+    class FalsoYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def extract_info(self, url, download=True):
+            if download:  # áudio para transcrever
+                if downloads is not None:
+                    downloads.append(url)
+                outtmpl = self.opts["outtmpl"]["default"]
+                from pathlib import Path
+                Path(outtmpl.replace("%(id)s", "abc").replace("%(ext)s", "m4a")).write_bytes(b"audio")
+            return {"id": "abc", "title": "Episódio", "channel": "Podcast",
+                    "automatic_captions": {"pt-orig": [{"ext": "vtt", "url": "https://legenda/abc"}]}}
+    return FalsoYDL
+
+
+def _servir(monkeypatch, corpos):
+    pedidos = []
+
+    def urlopen(req, timeout=60):
+        pedidos.append(req.full_url)
+        return _Resposta(corpos[min(len(pedidos), len(corpos)) - 1])
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    return pedidos
+
+
+def test_legenda_vazia_tenta_de_novo_e_avisa(monkeypatch, tmp_path):
+    monkeypatch.setattr(origem, "_YDL", _ydl_com_legenda())
+    esperas = []
+    monkeypatch.setattr(origem, "_esperar", esperas.append)
+    pedidos = _servir(monkeypatch, [b""])
+    r = origem.legenda("https://youtu.be/abc", tmp_path, "pt")
+    assert r["txt"] is None
+    assert r["aviso"] == "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+    assert len(pedidos) == 3 and esperas == [5, 15]
+    assert not list(tmp_path.glob("*.vtt"))
+
+
+def test_legenda_so_com_cabecalho_conta_como_vazia(monkeypatch, tmp_path):
+    monkeypatch.setattr(origem, "_YDL", _ydl_com_legenda())
+    monkeypatch.setattr(origem, "_esperar", lambda s: None)
+    pedidos = _servir(monkeypatch, [b"WEBVTT\nKind: captions\n\n", VTT_BOM.encode()])
+    r = origem.legenda("https://youtu.be/abc", tmp_path, "pt")
+    assert len(pedidos) == 2
+    assert r["txt"] and "eu tava na mata" in (tmp_path / "abc.txt").read_text(encoding="utf-8")
+
+
+def test_vtt_vazio_em_cache_e_apagado_e_baixado_de_novo(monkeypatch, tmp_path):
+    (tmp_path / "abc.pt-orig.vtt").write_bytes(b"")
+    monkeypatch.setattr(origem, "_YDL", _ydl_com_legenda())
+    monkeypatch.setattr(origem, "_esperar", lambda s: None)
+    pedidos = _servir(monkeypatch, [VTT_BOM.encode()])
+    r = origem.legenda("https://youtu.be/abc", tmp_path, "pt")
+    assert len(pedidos) == 1
+    assert r["txt"] and (tmp_path / "abc.pt-orig.vtt").read_text(encoding="utf-8") == VTT_BOM
+
+
+def test_legenda_vazia_com_transcrever_transcreve(monkeypatch, tmp_path):
+    from fabrica import transcricao
+    baixados = []
+    monkeypatch.setattr(origem, "_YDL", _ydl_com_legenda(baixados))
+    monkeypatch.setattr(origem, "_esperar", lambda s: None)
+    _servir(monkeypatch, [b""])
+    monkeypatch.setattr(transcricao, "transcrever",
+                        lambda audio, saida, modelo, idioma: [{"w": "eu", "s": 1.0, "e": 1.2}, {"w": "tava", "s": 1.3, "e": 1.6}])
+    r = origem.legenda("https://youtu.be/abc", tmp_path, "pt", transcrever_se_faltar=True)
+    assert r.get("transcrito") is True and baixados
+    assert "eu tava" in (tmp_path / "abc.txt").read_text(encoding="utf-8")
+
+
+def test_achar_episodio_sem_legenda_tem_erro(monkeypatch, tmp_path):
+    ref = tmp_path / "ref.txt"
+    ref.write_text("00:00:01 eu tava na mata\n", encoding="utf-8")
+    aviso = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+
+    def legenda(url, pasta, idioma="pt", transcrever_se_faltar=False):
+        if "modelo" in url:
+            return {"txt": str(ref), "titulo": "corte"}
+        return {"txt": None, "titulo": "Episódio 1", "aviso": aviso}
+    monkeypatch.setattr(origem, "legenda", legenda)
+    r = origem.achar("https://youtu.be/modelo", tmp_path, candidatos=["https://youtu.be/ep1"])
+    ep = r["episodios"][0]
+    assert "regioes" not in ep
+    assert "legenda vazia" in ep["erro"] and ep["titulo"] == "Episódio 1"
+
+
+def test_vtt_decodifica_entidades_html():
+    vtt = "WEBVTT\n\n00:00:01.000 --> 00:00:02.000\neu&nbsp;tava &amp; voc&ecirc; disse &quot;oi&quot; &gt;&gt; d&#39;\n"
+    assert origem.vtt_para_linhas(vtt) == [(1.0, "eu tava & você disse \"oi\" >> d'")]

@@ -1,14 +1,22 @@
 """Achar a origem do corte: legenda do YouTube, busca do episódio, localizar o trecho e baixar só ele."""
 from __future__ import annotations
 
+import html
 import re
 import shutil
+import time
 from collections import defaultdict
 from pathlib import Path
 
 from . import util
 
 _YDL = None  # trocado nos testes
+ESPERAS_LEGENDA = (5, 15)  # novas tentativas quando a legenda vem sem fala
+AVISO_VAZIA = "legenda vazia: o YouTube recusou; tente de novo em 1 minuto ou use --transcrever"
+
+
+def _esperar(segundos: float):  # trocado nos testes
+    time.sleep(segundos)
 
 
 class _ComRecuo:
@@ -99,8 +107,8 @@ def vtt_para_linhas(texto: str) -> list[tuple[float, str]]:
             continue
         if linha.startswith(("WEBVTT", "Kind:", "Language:", "NOTE")) or not linha.strip():
             continue
-        limpo = re.sub(r"<[^>]+>", "", linha).strip()
-        limpo = re.sub(r"\s+", " ", limpo)
+        limpo = html.unescape(re.sub(r"<[^>]+>", "", linha)).replace("\xa0", " ")
+        limpo = re.sub(r"\s+", " ", limpo).strip()
         if limpo and limpo != anterior:
             out.append((t, limpo))
             anterior = limpo
@@ -150,22 +158,41 @@ def escolher_legenda(info: dict, idioma: str):
     return None
 
 
-def _baixar_texto(url: str, tentativas: int = 4) -> bytes:
-    import time
+def _tem_fala(corpo: bytes) -> bool:
+    return bool(vtt_para_linhas(corpo.decode("utf-8", errors="replace")))
+
+
+def _baixar_texto(url: str, esperas=(3, 6, 12), valido=None) -> bytes:
+    """HTTP 429 e corpo vazio (o YouTube às vezes devolve 200 sem nada) são recusas: espera e tenta de novo.
+    Se continuar vazio, devolve b"" e quem chamou decide."""
     import urllib.error
     import urllib.request
-    espera = 3
-    for i in range(tentativas):
+    valido = valido or (lambda b: bool(b.strip()))
+    for i in range(len(esperas) + 1):
+        if i:
+            _esperar(esperas[i - 1])
         try:
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urllib.request.urlopen(req, timeout=60) as r:
-                return r.read()
+                corpo = r.read()
         except urllib.error.HTTPError as e:
-            if e.code != 429 or i == tentativas - 1:
+            if e.code != 429 or i == len(esperas):
                 raise util.ErroComando(f"o YouTube recusou a legenda (HTTP {e.code}). Espere 1 minuto e tente de novo.")
-            time.sleep(espera)
-            espera *= 2
-    raise util.ErroComando("não consegui baixar a legenda")
+            continue
+        if valido(corpo):
+            return corpo
+    return b""
+
+
+def _vtts_com_fala(pasta: Path, vid: str) -> list[Path]:
+    """Legendas já baixadas; uma sem nenhuma fala conta como inexistente e é apagada."""
+    bons = []
+    for p in sorted(pasta.glob(f"{vid}*.vtt")):
+        if vtt_para_linhas(p.read_text(encoding="utf-8", errors="replace")):
+            bons.append(p)
+        else:
+            p.unlink(missing_ok=True)
+    return bons
 
 
 def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = False) -> dict:
@@ -175,14 +202,19 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
     with _ydl(opcoes_ydl(idioma, skip_download=True)) as y:
         info = y.extract_info(url, download=False)
     vid = info.get("id", "video")
-    vtts = sorted(pasta.glob(f"{vid}*.vtt"))
+    vtts = _vtts_com_fala(pasta, vid)
+    vazia = False
     if not vtts:
         escolha = escolher_legenda(info, idioma)
         if escolha:
             chave, sub_url = escolha
-            destino = pasta / f"{vid}.{chave}.vtt"
-            destino.write_bytes(_baixar_texto(sub_url))
-            vtts = [destino]
+            corpo = _baixar_texto(sub_url, esperas=ESPERAS_LEGENDA, valido=_tem_fala)
+            if corpo:
+                destino = pasta / f"{vid}.{chave}.vtt"
+                destino.write_bytes(corpo)
+                vtts = [destino]
+            else:
+                vazia = True
     dados = {"id": vid, "titulo": info.get("title"), "canal": info.get("channel") or info.get("uploader"),
              "duracao": info.get("duration"), "views": info.get("view_count"), "data": info.get("upload_date"),
              "descricao": (info.get("description") or "")[:600]}
@@ -202,7 +234,7 @@ def legenda(url: str, pasta, idioma: str = "pt", transcrever_se_faltar: bool = F
         gravar_txt(transcricao.linhas(palavras), txt)
         dados.update(txt=str(txt), transcrito=True)
     else:
-        dados.update(txt=None, aviso="o vídeo não tem legenda; rode de novo com --transcrever")
+        dados.update(txt=None, aviso=AVISO_VAZIA if vazia else "o vídeo não tem legenda; rode de novo com --transcrever")
     return dados
 
 
@@ -282,9 +314,11 @@ def achar(modelo_url: str, pasta, idioma: str = "pt", busca: str | None = None, 
         except Exception as e:  # vídeo privado, removido etc.
             resultados.append({"url": url, "erro": f"{type(e).__name__}: {str(e)[:200]}"})
             continue
-        regioes = localizar(ref_palavras, ler_linhas(ep["vtt"])) if ep.get("vtt") else []
-        resultados.append({"url": url, "titulo": ep.get("titulo"), "canal": ep.get("canal"),
-                           "duracao": ep.get("duracao"), "regioes": regioes})
+        dados = {"url": url, "titulo": ep.get("titulo"), "canal": ep.get("canal"), "duracao": ep.get("duracao")}
+        if not ep.get("vtt"):  # sem legenda: diz por quê, em vez de "regioes: []" mudo
+            resultados.append({**dados, "erro": ep.get("aviso") or "sem legenda"})
+            continue
+        resultados.append({**dados, "regioes": localizar(ref_palavras, ler_linhas(ep["vtt"]))})
     resultados.sort(key=lambda r: -(r.get("regioes") or [{"acertos": 0}])[0]["acertos"])
     return {"modelo": {k: ref.get(k) for k in ("titulo", "canal", "views", "data", "descricao", "txt")},
             "episodios": resultados}
