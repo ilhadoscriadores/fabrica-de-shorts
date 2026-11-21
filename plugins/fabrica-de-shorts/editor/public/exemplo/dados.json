@@ -1,0 +1,64 @@
+{
+  "fps": 30,
+  "duracaoFrames": 180,
+  "base": { "src": "exemplo/base.mp4", "largura": 1920, "altura": 1080 },
+  "camera": [
+    { "f": 0, "cx": 0.35, "cy": 0.5 },
+    { "f": 60, "cx": 0.65, "cy": 0.45 },
+    { "f": 100, "cx": 0.65, "cy": 0.45 },
+    { "f": 100, "cx": 0.25, "cy": 0.55 }
+  ],
+  "zoom": true,
+  "cor": "#FFD60A",
+  "legenda": {
+    "top": 1180,
+    "blocos": [
+      { "f0": 0, "f1": 30, "tam": 92, "palavras": [
+        { "w": "ISSO", "f0": 0, "f1": 12, "destaque": false, "censura": false },
+        { "w": "AQUI", "f0": 12, "f1": 30, "destaque": false, "censura": false }
+      ] },
+      { "f0": 30, "f1": 62, "tam": 92, "palavras": [
+        { "w": "É", "f0": 30, "f1": 35, "destaque": false, "censura": false },
+        { "w": "UM", "f0": 35, "f1": 42, "destaque": false, "censura": false },
+        { "w": "TESTE", "f0": 42, "f1": 50, "destaque": true, "censura": false },
+        { "w": "COMPRIDÃO", "f0": 50, "f1": 62, "destaque": false, "censura": false }
+      ] },
+      { "f0": 62, "f1": 95, "tam": 92, "palavras": [
+        { "w": "DA", "f0": 62, "f1": 70, "destaque": false, "censura": false },
+        { "w": "FÁBRICA", "f0": 70, "f1": 95, "destaque": true, "censura": false }
+      ] },
+      { "f0": 95, "f1": 130, "tam": 92, "palavras": [
+        { "w": "QUE", "f0": 95, "f1": 103, "destaque": false, "censura": false },
+        { "w": "P*RRA", "f0": 103, "f1": 115, "destaque": false, "censura": true },
+        { "w": "LEGAL", "f0": 115, "f1": 130, "destaque": false, "censura": false }
+      ] },
+      { "f0": 130, "f1": 180, "tam": 92, "palavras": [
+        { "w": "NO", "f0": 130, "f1": 140, "destaque": false, "censura": false },
+        { "w": "AUTOMÁTICO", "f0": 140, "f1": 170, "destaque": false, "censura": false }
+      ] }
+    ]
+  },
+  "gancho": { "texto": "TESTE DA FÁBRICA", "emoji": "🎬", "f0": 0, "f1": 60 },
+  "credito": { "texto": "Fonte • Exemplo #1", "f1": 75 },
+  "imagens": [
+    { "src": "exemplo/imagem.png", "f0": 62, "f1": 92, "entrada": "zoom", "movimento": "in-right",
+      "tremidas": [80], "carimbo": "2026", "sepia": true, "sirene": false },
+    { "src": "exemplo/imagem.png", "f0": 100, "f1": 130, "entrada": "flash", "movimento": "out",
+      "tremidas": [], "carimbo": null, "sepia": false, "sirene": true },
+    { "src": "exemplo/imagem.png", "f0": 145, "f1": 175, "entrada": "slide-dir", "movimento": "up",
+      "tremidas": [160], "carimbo": null, "sepia": false, "sirene": false }
+  ],
+  "etiquetas": [
+    { "f0": 115, "f1": 155, "texto": "ETIQUETA DE TESTE", "emoji": "⚠️", "top": 300 }
+  ],
+  "marca": { "texto": "@FABRICA", "top": 980, "opacidade": 0.08 },
+  "sons": [
+    { "src": "exemplo/som.wav", "f": 0, "vol": 0.5 },
+    { "src": "exemplo/som.wav", "f": 58, "vol": 0.3 },
+    { "src": "exemplo/som.wav", "f": 80, "vol": 0.5 },
+    { "src": "exemplo/som.wav", "f": 103, "vol": 0.55 },
+    { "src": "exemplo/som.wav", "f": 175, "vol": 0.4 }
+  ],
+  "trilha": { "src": "exemplo/trilha.wav", "vol": 0.1 },
+  "selo": null
+}
