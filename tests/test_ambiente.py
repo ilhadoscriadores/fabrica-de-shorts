@@ -52,3 +52,34 @@ def test_node_antigo_conta_como_faltando(monkeypatch, tmp_path):
 def test_whisper_sem_dlls_cuda_usa_cpu_small(monkeypatch):
     monkeypatch.setattr(ambiente, "cuda_pronto", lambda: False)
     assert ambiente.whisper_dispositivo() == ("cpu", "int8", "small")
+
+
+ERRO_DRIVER = ("ffmpeg falhou (código 4294967274): -v error -f lavfi ...\n"
+               "[h264_nvenc @ 000001] Driver does not support the required nvenc API version. Required: 12.1 Found: 9.1\n"
+               "[h264_nvenc @ 000001] The minimum required Nvidia driver for nvenc is 531.61 or newer\n"
+               "Error while opening encoder - maybe incorrect parameters such as bit_rate, rate, width or height")
+
+
+def _nvenc_falha(monkeypatch, gpu="NVIDIA GeForce GTX 1060 6GB, 391.35"):
+    real = ambiente.util.rodar
+
+    def rodar(args, **kw):
+        if "h264_nvenc" in args:
+            raise util.ErroComando(ERRO_DRIVER)
+        return real(args, **kw)
+    monkeypatch.setattr(ambiente.util, "rodar", rodar)
+    monkeypatch.setattr(ambiente, "_gpu", lambda: gpu)
+    monkeypatch.setattr(ambiente, "cuda_pronto", lambda: False)
+
+
+def test_relatorio_diz_por_que_o_nvenc_falhou(monkeypatch, tmp_path):
+    _nvenc_falha(monkeypatch)
+    rel = ambiente.relatorio(tmp_path)
+    assert rel["ffmpeg"]["nvenc"] is False
+    assert "531.61" in rel["nvenc_motivo"] and "Driver does not support" in rel["nvenc_motivo"]
+    assert "-v error" not in rel["nvenc_motivo"] and len(rel["nvenc_motivo"]) <= 400
+
+
+def test_relatorio_sem_placa_nao_tem_motivo(monkeypatch, tmp_path):
+    _nvenc_falha(monkeypatch, gpu=None)
+    assert "nvenc_motivo" not in ambiente.relatorio(tmp_path)

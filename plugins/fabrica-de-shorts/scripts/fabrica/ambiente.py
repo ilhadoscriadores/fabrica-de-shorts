@@ -26,14 +26,20 @@ def achar_ffmpeg() -> str | None:
     return os.environ.get("FABRICA_FFMPEG") or shutil.which("ffmpeg")
 
 
-def testar_nvenc(ffmpeg: str) -> bool:
-    """Encode de verdade de 1 quadro: o ffmpeg pode listar h264_nvenc e falhar com driver antigo."""
+def erro_nvenc(ffmpeg: str) -> str | None:
+    """Encode de verdade de 1 quadro: o ffmpeg pode listar h264_nvenc e falhar com driver antigo.
+    None se a placa codifica; senão as últimas linhas do erro."""
     try:
         util.rodar([ffmpeg, "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.1",
                     "-frames:v", "1", "-c:v", "h264_nvenc", "-f", "null", "-"], timeout=60)
-        return True
-    except (util.ErroComando, OSError, Exception):
-        return False
+        return None
+    except Exception as e:
+        linhas = [x.strip() for x in str(e).splitlines() if x.strip()]
+        return "\n".join(linhas[1:][-3:] or linhas[-1:])[-400:] or type(e).__name__
+
+
+def testar_nvenc(ffmpeg: str) -> bool:
+    return erro_nvenc(ffmpeg) is None
 
 
 def encoder_video(ffmpeg: str | None = None, pasta=None) -> list[str]:
@@ -148,11 +154,12 @@ def relatorio(pasta=".") -> dict:
     except OSError:
         livre = None
     gpu = _gpu()
-    return {
+    motivo = erro_nvenc(ff) if (ff and gpu) else None
+    rel = {
         "sistema": f"{platform.system()} {platform.release()}",
         "python": {"versao": sys.version.split()[0], "ok": py_ok, "exe": sys.executable},
         "ffmpeg": {"ok": bool(ff), "caminho": ff, "versao": ffv,
-                   "nvenc": testar_nvenc(ff) if (ff and gpu) else False},
+                   "nvenc": bool(ff and gpu) and motivo is None},
         "node": {"ok": node_ok, "versao": node, "npm": npm},
         "yt_dlp": ytv, "faster_whisper": fw,
         "pip_faltando": pip_falta,
@@ -162,6 +169,9 @@ def relatorio(pasta=".") -> dict:
         "disco_livre_gb": round(livre, 1) if livre is not None else None,
         "faltando": faltando,
     }
+    if motivo:  # placa NVIDIA que não codifica: quase sempre driver antigo
+        rel["nvenc_motivo"] = motivo
+    return rel
 
 
 def _cmd_ambiente(args):
