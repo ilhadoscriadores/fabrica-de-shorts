@@ -7,8 +7,8 @@ from fabrica import biblioteca, entrega, imagens, util
 def test_novo_corte_numera(tmp_path):
     (tmp_path / "cortes" / "001-x").mkdir(parents=True)
     (tmp_path / "cortes" / "007-y").mkdir()
-    p = entrega.novo_corte(tmp_path, "Sgt Honório: a senha!")
-    assert p.name == "008-sgt-honorio-a-senha"
+    p = entrega.novo_corte(tmp_path, "Sgt Fulano: a ação!")
+    assert p.name == "008-sgt-fulano-a-acao"
     assert (p / "tempos.csv").read_text(encoding="utf-8").splitlines()[1].startswith("missao,")
 
 
@@ -48,20 +48,20 @@ def test_postagem_tem_credito_e_origem(tmp_path):
     (tmp_path / "biblioteca" / "LICENCAS.md").write_text(
         "| trilhas/epico/heroic.mp3 | Kevin MacLeod | CC BY 4.0 | crédito: \"Heroic Age\" Kevin MacLeod (incompetech.com) |\n", encoding="utf-8")
     util.gravar_json(c / "origem.json", {"url": "https://www.youtube.com/watch?v=ng-Q6ZD0XmI", "inicio_real": 12032,
-                                         "fim_real": 12339, "titulo": "SARGENTO HONÓRIO - Fala Glauber #183", "canal": "Fala Glauber Podcast"})
+                                         "fim_real": 12339, "titulo": "SARGENTO FULANO - Podcast Exemplo #100", "canal": "Canal do Podcast Exemplo"})
     util.gravar_json(c / "timeline.json", {"duracao": 89.5, "palavras": []})
     util.gravar_json(c / "corte.json", {
-        "modelo": {"url": "https://www.youtube.com/shorts/68L5Flrr0Mo", "titulo": "PM HONORIO", "canal": "Justiceiro Cortes", "views": 3754517},
+        "modelo": {"url": "https://www.youtube.com/shorts/68L5Flrr0Mo", "titulo": "SGT FULANO", "canal": "Cortes Exemplo", "views": 3754517},
         "edicao": {"imagens": [{"arquivo": "a.png", "s": 1, "e": 2}], "trilha": {"arquivo": "epico/heroic.mp3"}},
-        "postagem": {"titulo": "Gritou a senha do BOPE 😨", "legenda_tiktok": "Você atiraria?", "descricao": "Sgt Honório conta.",
+        "postagem": {"titulo": "Gritou a senha do BOPE 😨", "legenda_tiktok": "Você atiraria?", "descricao": "Sgt Fulano conta.",
                      "hashtags": ["#bope", "#podcast"]}})
     txt = entrega.postagem(c).read_text(encoding="utf-8")
     assert "Gritou a senha do BOPE" in txt and "#bope #podcast" in txt
-    assert ("Vídeo original: SARGENTO HONÓRIO - Fala Glauber #183 · "
+    assert ("Vídeo original: SARGENTO FULANO - Podcast Exemplo #100 · "
             "https://www.youtube.com/watch?v=ng-Q6ZD0XmI&t=12032s") in txt
     assert "Episódio" not in txt  # o vídeo baixado pode ser um vídeo curto do canal do podcast
-    assert txt.count("SARGENTO HONÓRIO") == 2  # 1 na descrição, 1 na origem
-    assert "Fala Glauber Podcast" in txt
+    assert txt.count("SARGENTO FULANO") == 2  # 1 na descrição, 1 na origem
+    assert "Canal do Podcast Exemplo" in txt
     assert "geradas por IA" in txt
     assert "Heroic Age" in txt
     assert "1min29" in txt

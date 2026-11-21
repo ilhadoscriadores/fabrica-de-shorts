@@ -310,7 +310,7 @@ def test_achar_poe_o_link_da_descricao_antes_da_busca(monkeypatch, tmp_path):
     monkeypatch.setattr(origem, "legenda", legenda)
     monkeypatch.setattr(origem, "buscar", lambda termo, limite, longos, idioma: [
         {"url": "https://www.youtube.com/watch?v=outro123456"}, {"url": ep}])
-    origem.achar("https://youtu.be/modelo", tmp_path, busca="honorio")
+    origem.achar("https://youtu.be/modelo", tmp_path, busca="fulano")
     assert vistos == [ep, "https://www.youtube.com/watch?v=outro123456"]
 
 

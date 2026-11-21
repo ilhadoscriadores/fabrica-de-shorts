@@ -8,7 +8,7 @@ from fabrica import util
 
 
 def test_rodar_caminho_com_acento(tmp_path):
-    pasta = tmp_path / "Shorts automático" / "Gabriel Dias"
+    pasta = tmp_path / "Shorts automático" / "Usuário Teste"
     pasta.mkdir(parents=True)
     saida = pasta / "saída teste.wav"
     util.rodar([util.ffmpeg(), "-v", "error", "-y", "-f", "lavfi", "-i", "sine=d=0.2", str(saida)])
