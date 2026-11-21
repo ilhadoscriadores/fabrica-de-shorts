@@ -120,6 +120,33 @@ def test_pedaco_todo_mudo_nao_some():
     assert base.refinar_keep(keep, _env([(4.0, 5.0)]), pausa_max=0.35) == keep
 
 
+def test_silencios_removidos():
+    antes = [[0.0, 10.0]]
+    depois = [[0.0, 2.1], [2.9, 5.1], [5.9, 8.1], [8.9, 10.0]]
+    assert base.silencios_removidos(antes, depois) == [[2.1, 2.9], [5.1, 5.9], [8.1, 8.9]]
+
+
+def test_palavrinha_esticada_por_cima_do_silencio_nao_some():
+    depois = [[0.0, 2.1], [2.9, 5.1], [5.9, 8.1], [8.9, 10.0]]
+    removidos = [[2.1, 2.9], [5.1, 5.9], [8.1, 8.9]]
+    ws = [W("tava", 1.0, 1.5),
+          W("na", 2.3, 3.2),        # começa no silêncio removido
+          W("o", 5.05, 5.6),        # termina no silêncio removido (só 0,05 s dentro)
+          W("e", 8.05, 9.1),        # passa por cima do silêncio inteiro (0,05 s antes, 0,2 s depois)
+          W("fantasma", 2.2, 2.8)]  # toda no silêncio: fica como está
+    assert [w["w"] for w in base.palavras_no_corte(ws, depois)] == ["tava"]  # o defeito
+    out = base.recortar_ao_som(ws, removidos)
+    assert [(w["s"], w["e"]) for w in out] == [(1.0, 1.5), (2.9, 3.2), (5.05, pytest.approx(5.11)), (8.9, 9.1), (2.2, 2.8)]
+    assert all(w["e"] - w["s"] >= 0.06 - 1e-9 for w in out)
+    assert [w["w"] for w in base.palavras_no_corte(out, depois)] == ["tava", "na", "o", "e"]
+
+
+def test_recortar_nunca_deixa_palavra_com_menos_de_60_ms():
+    out = base.recortar_ao_som([W("a", 2.3, 2.92, ), {**W("b", 2.0, 2.15), "censura": True}], [[2.1, 2.9]])
+    assert out[0]["s"] == pytest.approx(2.86) and out[0]["e"] == 2.92
+    assert out[1]["e"] == pytest.approx(2.1) and out[1]["censura"] is True
+
+
 # ---------- integração (ffmpeg) ----------
 @pytest.fixture
 def corte(tmp_path):
@@ -189,7 +216,8 @@ def test_transcricao_vazia_da_erro_claro(corte):
     assert "transcri" in str(e.value)
 
 
-def test_base_corta_silencio_que_o_whisper_esticou(tmp_path):
+def _corte_com_pausa(tmp_path):
+    """Voz de 1 a 2 s e de 3 a 4 s; silêncio de 1 s no meio."""
     util.gravar_json(tmp_path / "canal.json", {"nome": "T", "arroba": "@t", "idioma": "pt"})
     c = tmp_path / "cortes" / "001-t"
     c.mkdir(parents=True)
@@ -197,6 +225,23 @@ def test_base_corta_silencio_que_o_whisper_esticou(tmp_path):
                 "-f", "lavfi", "-i", "sine=f=220:d=6",
                 "-filter_complex", "[1:a]volume='if(between(t,1,2)+between(t,3,4),0.4,0.0003)':eval=frame[a]",
                 "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac", str(c / "bruto.mp4")])
+    return c
+
+
+def test_base_mantem_palavrinha_que_o_whisper_esticou_para_tras(tmp_path):
+    c = _corte_com_pausa(tmp_path)
+    ws = [W("eu", 1.0, 1.4), W("tava", 1.45, 2.0), W("na", 2.05, 3.4), W("mata", 3.5, 4.0)]  # "na" esticada
+    util.gravar_json(c / "palavras.json", ws)
+    util.gravar_json(c / "corte.json", {"trechos": [[0.9, 4.1]]})
+    r = base.base(c, rosto=False)
+    tl = util.ler_json(c / "timeline.json")
+    assert r["pedacos"] == 2 and [w["w"] for w in tl["palavras"]] == ["eu", "tava", "na", "mata"]
+    na = tl["palavras"][2]
+    assert na["s"] == pytest.approx(base.remap(tl["keep"], 2.9), abs=0.04)  # no começo da voz, depois do corte
+
+
+def test_base_corta_silencio_que_o_whisper_esticou(tmp_path):
+    c = _corte_com_pausa(tmp_path)
     ws = [W("eu", 1.0, 1.4), W("tava", 1.45, 2.9), W("na", 3.0, 3.4), W("mata", 3.5, 4.0)]  # "tava" esticada
     util.gravar_json(c / "palavras.json", ws)
     util.gravar_json(c / "corte.json", {"trechos": [[0.9, 4.1]]})

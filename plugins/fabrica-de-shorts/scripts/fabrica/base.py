@@ -156,6 +156,43 @@ def refinar_keep(keep, env, pausa_max: float, fps: int = FPS, passo: float = 0.0
     return [[round(x * fps) / fps, round(y * fps) / fps] for x, y in out]
 
 
+def silencios_removidos(antes, depois) -> list[list[float]]:
+    """O que o refinar_keep tirou: partes dos pedaços de antes que não estão em nenhum pedaço de depois."""
+    out = []
+    for s, e in antes:
+        cur = s
+        for a, b in sorted(depois):
+            if b <= cur or a >= e:
+                continue
+            if a > cur + 1e-9:
+                out.append([cur, a])
+            cur = max(cur, b)
+        if e > cur + 1e-9:
+            out.append([cur, e])
+    return [[round(a, 6), round(b, 6)] for a, b in out]
+
+
+def recortar_ao_som(ws: list[dict], removidos, minimo: float = 0.06) -> list[dict]:
+    """Palavra que o Whisper esticou por cima de um silêncio removido fica só com o pedaço que tem som:
+    começo no silêncio → vai para o fim dele; fim no silêncio → vai para o começo dele; por cima do silêncio
+    inteiro → fica o lado maior. Nunca com menos de `minimo` s. Palavra toda no silêncio fica como está."""
+    out = []
+    for w in ws:
+        s, e = w["s"], w["e"]
+        for a, b in removidos:
+            if e <= a or s >= b:
+                continue
+            antes, depois = a - s, e - b
+            if antes <= 0 and depois <= 0:
+                continue
+            if depois >= antes:
+                s = max(s, min(b, e - minimo))
+            else:
+                e = min(e, max(a, s + minimo))
+        out.append({**w, "s": round(s, 3), "e": round(e, 3)} if (s, e) != (w["s"], w["e"]) else w)
+    return out
+
+
 def palavras_no_corte(ws: list[dict], keep) -> list[dict]:
     """Palavras no tempo do corte final. Só entra a que começa dentro de um pedaço e tem pelo menos
     min(0,08 s, metade dela) lá dentro: a que só encosta no fim do pedaço não tem áudio."""
@@ -214,8 +251,9 @@ def base(pasta_corte, rosto: bool = True) -> dict:
     for i in cens:
         ws[i] = {**ws[i], "w": mascarar(ws[i]["w"]), "censura": True}
     bruto = pasta / corte.get("bruto", "bruto.mp4")
-    keep = calcular_keep(ws, corte["trechos"], corte["pausa_max"])
-    keep = refinar_keep(keep, util.envelope_db(bruto, sr=16000), corte["pausa_max"])
+    keep_whisper = calcular_keep(ws, corte["trechos"], corte["pausa_max"])
+    keep = refinar_keep(keep_whisper, util.envelope_db(bruto, sr=16000), corte["pausa_max"])
+    ws = recortar_ao_som(ws, silencios_removidos(keep_whisper, keep))  # senão "na", "e", "o" somem da legenda
     total = round(sum(e - s for s, e in keep), 6)
     cens_final = [[round(remap(keep, ws[i]["s"] - 0.02), 3), round(remap(keep, ws[i]["e"] + 0.02), 3)] for i in cens
                   if any(s - 0.01 <= ws[i]["s"] <= e for s, e in keep)]
